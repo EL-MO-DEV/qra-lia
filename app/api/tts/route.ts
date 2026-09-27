@@ -97,6 +97,109 @@ function retryDelayMs(data: TtsResponse): number {
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+// ---------- Fallback voice: Groq TTS (Orpheus), separate quota from Gemini ----------
+const GROQ_TTS = {
+  ar: { model: process.env.GROQ_TTS_MODEL_AR?.trim() || "canopylabs/orpheus-arabic-saudi", voice: process.env.GROQ_TTS_VOICE_AR?.trim() || "fahad" },
+  en: { model: process.env.GROQ_TTS_MODEL_EN?.trim() || "canopylabs/orpheus-v1-english", voice: process.env.GROQ_TTS_VOICE_EN?.trim() || "hannah" },
+};
+const GROQ_CHUNK_CHARS = 190; // Orpheus takes short inputs: synthesize sentence groups and join them
+
+/** Split on sentence punctuation, then pack into chunks of at most `max` chars. */
+function chunkText(text: string, max: number): string[] {
+  const sentences = text.replace(/([.!?؟،؛])\s+/g, "$1\n").split(/\n+/).map((x) => x.trim()).filter(Boolean);
+  const chunks: string[] = [];
+  let cur = "";
+  for (let sentence of sentences) {
+    while (sentence.length > max) {
+      const cut = sentence.lastIndexOf(" ", max);
+      const at = cut > 0 ? cut : max;
+      if (cur) {
+        chunks.push(cur);
+        cur = "";
+      }
+      chunks.push(sentence.slice(0, at).trim());
+      sentence = sentence.slice(at).trim();
+    }
+    if ((cur + " " + sentence).trim().length > max) {
+      if (cur) chunks.push(cur);
+      cur = sentence;
+    } else cur = (cur + " " + sentence).trim();
+  }
+  if (cur) chunks.push(cur);
+  return chunks;
+}
+
+/** Read a PCM WAV: sample rate, channels, bits and the raw data chunk. */
+function parseWav(buf: Buffer): { rate: number; channels: number; bits: number; data: Buffer } | null {
+  if (buf.length < 44 || buf.toString("ascii", 0, 4) !== "RIFF" || buf.toString("ascii", 8, 12) !== "WAVE") return null;
+  let off = 12;
+  let rate = 0, channels = 0, bits = 0;
+  while (off + 8 <= buf.length) {
+    const id = buf.toString("ascii", off, off + 4);
+    let size = buf.readUInt32LE(off + 4);
+    if (id === "fmt ") {
+      channels = buf.readUInt16LE(off + 10);
+      rate = buf.readUInt32LE(off + 12);
+      bits = buf.readUInt16LE(off + 22);
+    } else if (id === "data") {
+      if (size === 0 || size === 0xffffffff || off + 8 + size > buf.length) size = buf.length - off - 8; // streamed WAVs
+      return { rate, channels, bits, data: buf.subarray(off + 8, off + 8 + size) };
+    }
+    off += 8 + size + (size % 2);
+  }
+  return null;
+}
+
+/** Groq's 400 for a bad voice lists the valid ones ("… one of [a, b, c]" or "…: a, b, c"): take the first. */
+function voiceFromError(message: string): string | null {
+  const list =
+    /\[([^\]]+)\]/.exec(message)?.[1] ?? // [noura, abdullah]
+    /one of:?\s*([^\n.]+)/i.exec(message)?.[1] ?? // one of noura, abdullah
+    null;
+  if (!list) return null;
+  const first = list.split(/[,|\s]+/).map((v) => v.replace(/["'`]/g, "")).find((v) => /^[a-z][\w-]*$/i.test(v));
+  return first ?? null;
+}
+
+async function groqSpeech(text: string, lang: "ar" | "en", deadline: number): Promise<{ wav: Buffer; detail: string }> {
+  const key = process.env.GROQ_API_KEY?.trim();
+  if (!key) throw new Error("groq tts: no key");
+  const { model } = GROQ_TTS[lang];
+  let voice = GROQ_TTS[lang].voice;
+  const parts: Buffer[] = [];
+  let rate = 0;
+  for (const chunk of chunkText(text, GROQ_CHUNK_CHARS)) {
+    for (let attempt = 0; ; attempt++) {
+      const left = deadline - Date.now();
+      if (left < 3_000) throw new Error("groq tts: out of time");
+      const res = await fetch("https://api.groq.com/openai/v1/audio/speech", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
+        signal: AbortSignal.timeout(left),
+        body: JSON.stringify({ model, voice, input: chunk, response_format: "wav" }),
+      });
+      if (res.ok) {
+        const wav = parseWav(Buffer.from(await res.arrayBuffer()));
+        if (!wav || wav.bits !== 16 || wav.channels !== 1) throw new Error("groq tts: unexpected audio format");
+        if (rate && wav.rate !== rate) throw new Error("groq tts: mixed sample rates");
+        rate = wav.rate;
+        parts.push(wav.data);
+        break;
+      }
+      const body = (await res.json().catch(() => ({}))) as { error?: { message?: string } };
+      const message = body.error?.message ?? "";
+      const suggested = res.status === 400 && attempt === 0 ? voiceFromError(message) : null;
+      if (suggested && suggested !== voice) {
+        voice = suggested; // wrong default voice name: use the first valid one Groq lists
+        continue;
+      }
+      throw new Error(`groq tts http ${res.status}: ${message.slice(0, 180)} (model ${model}, voice ${voice})`);
+    }
+  }
+  const pcm = Buffer.concat(parts);
+  return { wav: pcmToWav(resample(pcm, rate, OUTPUT_RATE), OUTPUT_RATE), detail: `${model} / ${voice}` };
+}
+
 function fail(status: number, error: string, detail?: string) {
   console.warn(JSON.stringify({ route: "tts", error, detail }));
   return Response.json({ error }, { status });
@@ -138,10 +241,11 @@ export async function POST(request: Request) {
   const timeLeft = () => BUDGET_MS - (Date.now() - started);
   let lastError = "no attempt";
   let retries = 0;
+  const groqAvailable = Boolean(process.env.GROQ_API_KEY?.trim());
 
-  for (const model of models) {
+  gemini: for (const model of models) {
     for (let attempt = 0; attempt < 3; attempt++) {
-      if (timeLeft() < 8_000) return fail(502, "tts_unavailable", `out of time, last: ${lastError}`);
+      if (timeLeft() < 8_000) break gemini;
       try {
         const res = await fetch(
           `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
@@ -163,7 +267,8 @@ export async function POST(request: Request) {
           // Per-minute quota: wait what Google asks, then retry the same model (never log the text).
           const wait = retryDelayMs(data);
           lastError = `http 429 (retry in ${wait} ms) (model ${model})`;
-          if (wait > MAX_RETRY_WAIT_MS || wait > timeLeft() - 15_000) break;
+          // With a Groq fallback available, don't make the user wait for Gemini's quota window.
+          if (groqAvailable || wait > MAX_RETRY_WAIT_MS || wait > timeLeft() - 15_000) break;
           retries++;
           await sleep(wait);
           continue;
@@ -193,6 +298,17 @@ export async function POST(request: Request) {
         lastError = `${e instanceof Error ? `${e.name}: ${e.message}` : "error"} (model ${model})`;
         break;
       }
+    }
+  }
+  // Fallback voice: Groq TTS (separate quota).
+  if (groqAvailable && timeLeft() > 6_000) {
+    try {
+      const { wav, detail } = await groqSpeech(text, lang, started + BUDGET_MS);
+      remember(cacheKey, wav);
+      console.info(JSON.stringify({ route: "tts", provider: "groq", model: detail, chars: text.length, ms: Date.now() - started, bytes: wav.length, gemini: lastError }));
+      return new Response(new Uint8Array(wav), { headers: { "Content-Type": "audio/wav", "Cache-Control": "private, max-age=3600" } });
+    } catch (e) {
+      lastError = `${lastError} | ${e instanceof Error ? e.message : "groq tts error"}`;
     }
   }
   return fail(502, "tts_unavailable", lastError);
