@@ -28,16 +28,23 @@ export function pickArabicVoice(
   return arabic.reduce((best, v) => (score(v) > score(best) ? v : best));
 }
 
+/** Prefer an English voice (en-GB/en-US), on-device first. */
+export function pickEnglishVoice(voices: SpeechSynthesisVoice[]): SpeechSynthesisVoice | null {
+  const english = voices.filter((v) => normLang(v.lang).startsWith("en"));
+  return english.find((v) => v.localService) ?? english[0] ?? null;
+}
+
 /** Voices load asynchronously: try now, then on every `voiceschanged`. Returns an unsubscribe fn. */
 export function watchArabicVoice(
   onVoice: (voice: SpeechSynthesisVoice | null) => void,
+  pick: (voices: SpeechSynthesisVoice[]) => SpeechSynthesisVoice | null = pickArabicVoice,
 ): () => void {
   if (!isSpeechSupported()) {
     onVoice(null);
     return () => {};
   }
   const synth = window.speechSynthesis;
-  const check = () => onVoice(pickArabicVoice(synth.getVoices()));
+  const check = () => onVoice(pick(synth.getVoices()));
   check();
   synth.addEventListener("voiceschanged", check);
   return () => synth.removeEventListener("voiceschanged", check);

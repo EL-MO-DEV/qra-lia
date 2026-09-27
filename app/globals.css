@@ -238,6 +238,62 @@ img {
   min-height: 44px;
 }
 
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.lang-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 2px solid var(--primary);
+  background: var(--surface);
+  color: var(--primary);
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.lang-switch:disabled {
+  opacity: 0.5;
+}
+
+/* English mode: French subtitles are hidden, the camera arrow points the other way */
+html[lang="en"] .fr,
+html[lang="en"] .fr-inline,
+html[lang="en"] [lang="fr"] {
+  display: none !important;
+}
+
+.brand-name strong,
+.topbar-chip,
+.lang-switch {
+  white-space: nowrap;
+}
+
+/* Narrow phones: the "new paper" chip keeps only its icon */
+@media (max-width: 379px) {
+  .topbar-chip .chip-label {
+    display: none;
+  }
+  .topbar-chip,
+  .lang-switch {
+    padding: 8px 10px;
+  }
+}
+
+.flip-ltr {
+  display: inline-block;
+}
+
+html[dir="ltr"] .flip-ltr {
+  transform: scaleX(-1);
+}
+
 /* ---------- Demo banner ---------- */
 .demo-banner {
   background: repeating-linear-gradient(-45deg, var(--accent-soft), var(--accent-soft) 12px, transparent 12px, transparent 24px),

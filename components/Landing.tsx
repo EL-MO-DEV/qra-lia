@@ -1,64 +1,77 @@
+"use client";
+
+import { useLang, type StringKey } from "@/lib/i18n";
+import type { Lang } from "@/lib/types";
 import ListenButton from "./ListenButton";
 import UploadPanel from "./UploadPanel";
-
-// Spoken version of the whole home page, for people who can't read it.
-const PAGE_NARRATION =
-  "مرحبا بيك فاقرا ليا. هاد التطبيق كيقرا ليك الأوراق ديالك وكيشرحها ليك بالدارجة. " +
-  "صوّر أي ورقة: فاتورة ديال الضو والما، رسالة ديال البنكة، الضمان الاجتماعي ولا الإدارة. " +
-  "غادي نقولو ليك شنو هي هاد الورقة، شكون صيفطها، شحال خاصك تخلّص وفوقاش، وشنو خاصك دير. " +
-  "وإلا كانت فيها علامات ديال النصب، بحال إلا طلبو منك الكود ديال الكارط، غادي نحذروك. " +
-  "تقدر تسمع الشرح بالصوت، وتصيفطو لشي حد من العائلة، وتزيد تذكير قبل الأجل. " +
-  "التصويرة ما كتحفظش عندنا. وإلا كانت الورقة مهمة، تأكد ديما مع شي حد تيق فيه. " +
-  "باش تبدا، ورك على الزر الكبير الأخضر: صوّر الورقة.";
 
 type LandingProps = {
   onFileChosen: (file: File) => void;
 };
 
-const STEPS = [
-  { icon: "📸", title: "صوّر الورقة", text: "فاتورة، رسالة ديال البنكة، CNSS، الإدارة…", fr: "Photographiez le document" },
-  { icon: "🤖", title: "كنقراوها ليك", text: "الذكاء الاصطناعي كيفهم الفرنسية والعربية فثواني", fr: "L'IA le lit en quelques secondes" },
-  { icon: "🔊", title: "سمع وفهم بالدارجة", text: "شنو هي، شحال، فوقاش، وشنو خاصك دير", fr: "Explication en darija, à l'écrit et à voix haute" },
+// Spoken version of the whole home page, for people who can't read it.
+const PAGE_NARRATION: Record<Lang, string> = {
+  ar:
+    "مرحبا بيك فاقرا ليا. هاد التطبيق كيقرا ليك الأوراق ديالك وكيشرحها ليك بالدارجة. " +
+    "صوّر أي ورقة: فاتورة ديال الضو والما، رسالة ديال البنكة، الضمان الاجتماعي ولا الإدارة. " +
+    "غادي نقولو ليك شنو هي هاد الورقة، شكون صيفطها، شحال خاصك تخلّص وفوقاش، وشنو خاصك دير. " +
+    "وإلا كانت فيها علامات ديال النصب، بحال إلا طلبو منك الكود ديال الكارط، غادي نحذروك. " +
+    "تقدر تسمع الشرح بالصوت، وتصيفطو لشي حد من العائلة، وتزيد تذكير قبل الأجل. " +
+    "التصويرة ما كتحفظش عندنا. وإلا كانت الورقة مهمة، تأكد ديما مع شي حد تيق فيه. " +
+    "باش تبدا، ورك على الزر الكبير الأخضر: صوّر الورقة.",
+  en:
+    "Welcome to Qra Lia. This app reads your paperwork and explains it to you simply. " +
+    "Photograph any paper: an electricity or water bill, a bank letter, social security or a government letter. " +
+    "We tell you what it is, who sent it, how much you have to pay and by when, and what to do next. " +
+    "If it shows signs of a scam, like asking for your card code, we warn you. " +
+    "You can listen to the explanation, send it to a family member, and add a reminder before the deadline. " +
+    "Your photo is never stored. For important papers, always check with someone you trust. " +
+    "To start, press the big green button: Take a photo.",
+};
+
+const STEPS: { icon: string; title: StringKey; text: StringKey; fr: string }[] = [
+  { icon: "📸", title: "step1T", text: "step1", fr: "Photographiez le document" },
+  { icon: "🤖", title: "step2T", text: "step2", fr: "L'IA le lit en quelques secondes" },
+  { icon: "🔊", title: "step3T", text: "step3", fr: "Explication en darija, à l'écrit et à voix haute" },
 ];
 
-const FEATURES = [
-  { icon: "💰", title: "شحال وفوقاش", text: "المبلغ والأجل بخط كبير، وشحال بقا ليك من يوم" },
-  { icon: "✅", title: "شنو خاصك دير", text: "خطوة واضحة: فين تخلّص ولا شنو تجاوب" },
-  { icon: "🔊", title: "بالصوت", text: "سمع الشرح بلا ما تحتاج تقرا" },
-  { icon: "📤", title: "صيفط للعائلة", text: "صيفط الشرح فواتساب باش يتأكدو معاك" },
-  { icon: "⏰", title: "فكّرني", text: "تذكير فالكاليندري يومين قبل الأجل" },
+const FEATURES: { icon: string; title: StringKey; text: StringKey }[] = [
+  { icon: "💰", title: "f1T", text: "f1" },
+  { icon: "✅", title: "f2T", text: "f2" },
+  { icon: "🔊", title: "f3T", text: "f3" },
+  { icon: "📤", title: "f4T", text: "f4" },
+  { icon: "⏰", title: "f5T", text: "f5" },
 ];
 
 /** Home screen: the camera button first (one tap to start), then what Qra Lia is and why to trust it. */
 export default function Landing({ onFileChosen }: LandingProps) {
+  const { lang, t } = useLang();
+
   return (
     <>
       <section className="hero" id="start">
         <div className="container hero-grid">
           <div className="reveal">
             <div style={{ marginBottom: 18 }}>
-              <ListenButton
-                text={PAGE_NARRATION}
-                label="سمع شنو هو هاد التطبيق"
-                sub="Écouter la présentation"
-                prefetch={false}
-              />
+              <ListenButton text={PAGE_NARRATION[lang]} label={t("listenIntro")} sub="Écouter la présentation" prefetch={false} />
             </div>
             <span className="eyebrow">
-              <span aria-hidden="true">✨</span> مساعد ذكي للأوراق ديالك
+              <span aria-hidden="true">✨</span> {t("eyebrow")}
             </span>
             <h1 className="hero-title">
-              صوّر أي ورقة، <span className="hl">نشرحوها ليك</span> بالدارجة
+              {t("heroA")}
+              <span className="hl">{t("heroHl")}</span>
+              {t("heroB")}
             </h1>
-            <p className="hero-sub">فاتورة، رسالة ديال البنكة ولا الإدارة: نقولو ليك شنو فيها، شحال خاصك تخلّص، وفوقاش.</p>
-            <p className="hero-sub-fr" lang="fr">
+            <p className="hero-sub">{t("heroSub")}</p>
+            <p className="hero-sub-fr fr" lang="fr">
               Photographiez n&apos;importe quel document : on vous l&apos;explique en darija, à l&apos;écrit et à voix haute.
             </p>
             <div className="trust-row">
-              <span className="trust-chip">🔒 بلا تسجيل</span>
-              <span className="trust-chip">🔊 بالصوت</span>
-              <span className="trust-chip">⚡ فثواني</span>
-              <span className="trust-chip">🛡️ كنكشفو النصب</span>
+              <span className="trust-chip">{t("noSignup")}</span>
+              <span className="trust-chip">{t("chipVoice")}</span>
+              <span className="trust-chip">{t("chipFast")}</span>
+              <span className="trust-chip">{t("chipScam")}</span>
             </div>
           </div>
 
@@ -71,9 +84,9 @@ export default function Landing({ onFileChosen }: LandingProps) {
       <section className="section" aria-labelledby="how">
         <div className="container">
           <div className="section-head">
-            <p className="section-kicker">كيفاش كتخدم</p>
+            <p className="section-kicker">{t("howKicker")}</p>
             <h2 className="section-title" id="how">
-              3 خطوات وصافي
+              {t("howTitle")}
               <span className="fr" lang="fr">
                 Comment ça marche
               </span>
@@ -87,9 +100,9 @@ export default function Landing({ onFileChosen }: LandingProps) {
                 </span>
                 <div>
                   <h3>
-                    {i + 1}. {s.title}
+                    {i + 1}. {t(s.title)}
                   </h3>
-                  <p>{s.text}</p>
+                  <p>{t(s.text)}</p>
                   <p className="fr" lang="fr">
                     {s.fr}
                   </p>
@@ -107,7 +120,7 @@ export default function Landing({ onFileChosen }: LandingProps) {
               1 / 4
             </p>
             <p className="stat-text">
-              واحد من كل 4 ديال المغاربة ما كيعرفش يقرا، والأوراق الرسمية كتجي بالفرنسية ولا بالعربية الفصحى.
+              {t("statText")}
               <span className="fr" lang="fr">
                 1 Marocain sur 4 ne sait pas lire — les papiers officiels arrivent en français ou en arabe classique.
               </span>
@@ -120,9 +133,9 @@ export default function Landing({ onFileChosen }: LandingProps) {
       <section className="section" aria-labelledby="what" style={{ paddingTop: 0 }}>
         <div className="container">
           <div className="section-head">
-            <p className="section-kicker">شنو كتاخد</p>
+            <p className="section-kicker">{t("whatKicker")}</p>
             <h2 className="section-title" id="what">
-              كلشي واضح، بخط كبير
+              {t("whatTitle")}
               <span className="fr" lang="fr">
                 Tout ce qu&apos;il faut savoir, en grand
               </span>
@@ -134,16 +147,16 @@ export default function Landing({ onFileChosen }: LandingProps) {
                 <span className="feature-icon" aria-hidden="true">
                   {f.icon}
                 </span>
-                <h3>{f.title}</h3>
-                <p>{f.text}</p>
+                <h3>{t(f.title)}</h3>
+                <p>{t(f.text)}</p>
               </div>
             ))}
             <div className="feature feature-wide">
               <span className="feature-icon" aria-hidden="true">
                 ⚠️
               </span>
-              <h3>رد البال من النصب</h3>
-              <p>إلا طلبو منك الكود ديال الكارط، رابط غريب ولا تحويل مستعجل، كنحذروك مباشرة.</p>
+              <h3>{t("f6T")}</h3>
+              <p>{t("f6")}</p>
             </div>
           </div>
         </div>
@@ -153,7 +166,7 @@ export default function Landing({ onFileChosen }: LandingProps) {
         <div className="container">
           <div className="privacy">
             <h2 className="section-title" id="privacy" style={{ fontSize: 28 }}>
-              خصوصيتك قبل كلشي
+              {t("privacyTitle")}
               <span className="fr" lang="fr">
                 Votre vie privée d&apos;abord
               </span>
@@ -163,14 +176,14 @@ export default function Landing({ onFileChosen }: LandingProps) {
                 <span className="ico" aria-hidden="true">
                   🗑️
                 </span>
-                <span>الصورة ما كتحفظش: كنقراوها ومن بعد كتمشي.</span>
+                <span>{t("p1")}</span>
               </li>
               <li>
                 <span className="ico" aria-hidden="true">
                   🙈
                 </span>
                 <span>
-                  أرقام CIN، RIB والكارط كنخبيوهم
+                  {t("p2")}
                   <span className="mask-demo">••••1234</span>
                 </span>
               </li>
@@ -178,13 +191,13 @@ export default function Landing({ onFileChosen }: LandingProps) {
                 <span className="ico" aria-hidden="true">
                   📝
                 </span>
-                <span>كنصيفطو غير الشرح للعائلة، ماشي التصويرة.</span>
+                <span>{t("p3")}</span>
               </li>
               <li>
                 <span className="ico" aria-hidden="true">
                   🤝
                 </span>
-                <span>ما كنخترعو والو: إلا ما بانش شي حاجة كنقولوها ليك. وإلا كانت الورقة مهمة، تأكد ديما مع شي حد تيق فيه.</span>
+                <span>{t("p4")}</span>
               </li>
             </ul>
           </div>
@@ -193,15 +206,15 @@ export default function Landing({ onFileChosen }: LandingProps) {
 
       <section className="section cta-final" style={{ paddingTop: 0 }}>
         <div className="container">
-          <h2 className="section-title">عندك شي ورقة ما فهمتيهاش؟</h2>
+          <h2 className="section-title">{t("ctaTitle")}</h2>
           <p>
-            جرب دابا، فابور.
+            {t("ctaText")}
             <span className="fr" lang="fr">
               Essayez maintenant, c&apos;est gratuit.
             </span>
           </p>
           <a className="btn btn-primary" href="#start">
-            <span aria-hidden="true">📸</span> صوّر ورقة دابا
+            <span aria-hidden="true">📸</span> {t("ctaBtn")}
           </a>
         </div>
       </section>
@@ -211,8 +224,8 @@ export default function Landing({ onFileChosen }: LandingProps) {
           <p>
             <strong>Qra Lia · اقرا ليا</strong> — GOMYCODE × NVIDIA « Come Build with AI » 2026
           </p>
-          <p>الذكاء الاصطناعي يقدر يغلط: تأكد ديما من الورقة الأصلية.</p>
-          <p lang="fr" dir="ltr">
+          <p>{t("footerAi")}</p>
+          <p lang="fr" dir="ltr" className="fr">
             L&apos;IA peut se tromper : vérifiez toujours le document original.
           </p>
         </div>

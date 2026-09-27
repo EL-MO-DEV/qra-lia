@@ -1,6 +1,8 @@
 // Primary provider: Google Gemini (vision + structured JSON output) via the REST API.
 // Ported from @SanaaOua's backend (ma.qralia.ai.GeminiVisionClient).
+import { OUTPUT_LANGUAGE_NOTE } from "./lang";
 import { RETRY_INSTRUCTION, SYSTEM_PROMPT, USER_INSTRUCTION } from "./prompt";
+import type { Lang } from "./types";
 import { MODEL_JSON_SCHEMA, ProviderError, parseModelOutput, providerErrorDetail, type ModelExtraction } from "./schema";
 
 const TIMEOUT_MS = 15_000;
@@ -31,7 +33,7 @@ type GeminiResponse = {
 };
 
 async function call(
-  model: string, imageBase64: string, mimeType: string, retry: boolean, extras: boolean, timeoutMs: number,
+  model: string, imageBase64: string, mimeType: string, retry: boolean, extras: boolean, timeoutMs: number, lang: Lang,
 ): Promise<Response> {
   return fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
@@ -45,7 +47,7 @@ async function call(
           {
             role: "user",
             parts: [
-              { text: retry ? RETRY_INSTRUCTION : USER_INSTRUCTION },
+              { text: (retry ? RETRY_INSTRUCTION : USER_INSTRUCTION) + OUTPUT_LANGUAGE_NOTE[lang] },
               { inlineData: { mimeType, data: imageBase64 } },
             ],
           },
@@ -69,7 +71,9 @@ async function call(
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /** Throws ProviderError (network/HTTP) or InvalidModelOutput (bad JSON, worth one retry). */
-export async function extractWithGemini(imageBase64: string, mimeType: string, retry = false): Promise<ModelExtraction> {
+export async function extractWithGemini(
+  imageBase64: string, mimeType: string, retry = false, lang: Lang = "ar",
+): Promise<ModelExtraction> {
   if (!geminiEnabled()) throw new ProviderError("gemini disabled");
   const started = Date.now();
   const timeLeft = () => BUDGET_MS - (Date.now() - started);
@@ -80,9 +84,9 @@ export async function extractWithGemini(imageBase64: string, mimeType: string, r
       if (timeLeft() < 2_000) throw new ProviderError(`gemini out of time, last: ${lastError}`);
       let res: Response;
       try {
-        res = await call(model, imageBase64, mimeType, retry, true, Math.min(TIMEOUT_MS, timeLeft()));
+        res = await call(model, imageBase64, mimeType, retry, true, Math.min(TIMEOUT_MS, timeLeft()), lang);
         // Some models reject responseJsonSchema or thinkingConfig: retry once in plain JSON mode (zod still validates).
-        if (res.status === 400) res = await call(model, imageBase64, mimeType, retry, false, Math.max(1_000, Math.min(TIMEOUT_MS, timeLeft())));
+        if (res.status === 400) res = await call(model, imageBase64, mimeType, retry, false, Math.max(1_000, Math.min(TIMEOUT_MS, timeLeft())), lang);
       } catch (e) {
         // Timeout / network: don't hammer the same model, move on.
         lastError = `${e instanceof Error ? `${e.name}: ${e.message}` : "error"} (model ${model})`;

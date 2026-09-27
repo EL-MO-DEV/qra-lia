@@ -37,6 +37,8 @@ Then the user can:
 | 📤 | **Send to family:** the explanation goes to WhatsApp or the share sheet as text only, never the photo. |
 | ⏰ | **Reminder:** a calendar event on the deadline, with an alert 2 days before (`.ics`, works with Google Calendar and iPhone). |
 
+🌐 **Darija / English switch** (top bar): the whole app, the AI explanation and the voice switch to English — handy for visitors and international reviewers. The choice is remembered on the phone.
+
 Built for elderly and low-literacy users:
 - one giant button per screen;
 - text at least 20 px, buttons at least 56 px;

@@ -23,4 +23,6 @@ export type ApiErrorCode =
 
 export type ApiError = { error: ApiErrorCode; darija_message?: string };
 
-export type ReadRequest = { imageBase64: string; mimeType: "image/jpeg" | "image/png" | "image/webp" };
+export type Lang = "ar" | "en";
+
+export type ReadRequest = { imageBase64: string; mimeType: "image/jpeg" | "image/png" | "image/webp"; lang?: Lang };

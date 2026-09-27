@@ -1,6 +1,8 @@
 // Fallback provider: Groq (OpenAI-compatible chat completions with a vision model).
 // Ported from @SanaaOua's backend (ma.qralia.ai.GroqVisionClient).
+import { OUTPUT_LANGUAGE_NOTE } from "./lang";
 import { RETRY_INSTRUCTION, SYSTEM_PROMPT, USER_INSTRUCTION } from "./prompt";
+import type { Lang } from "./types";
 import { MODEL_JSON_SCHEMA, ProviderError, parseModelOutput, providerErrorDetail, type ModelExtraction } from "./schema";
 
 const TIMEOUT_MS = 12_000; // Gemini budget (16 s) + Groq stays under the app's 30 s timeout
@@ -22,9 +24,11 @@ export function groqModel(): string {
 type GroqResponse = { choices?: { message?: { content?: string } }[] };
 
 /** Throws ProviderError (network/HTTP) or InvalidModelOutput (bad JSON, worth one retry). */
-export async function extractWithGroq(imageBase64: string, mimeType: string, retry = false): Promise<ModelExtraction> {
+export async function extractWithGroq(
+  imageBase64: string, mimeType: string, retry = false, lang: Lang = "ar",
+): Promise<ModelExtraction> {
   if (!groqEnabled()) throw new ProviderError("groq disabled");
-  const prompt = `${retry ? RETRY_INSTRUCTION : USER_INSTRUCTION}\nSchema:\n${JSON.stringify(MODEL_JSON_SCHEMA)}`;
+  const prompt = `${retry ? RETRY_INSTRUCTION : USER_INSTRUCTION}${OUTPUT_LANGUAGE_NOTE[lang]}\nSchema:\n${JSON.stringify(MODEL_JSON_SCHEMA)}`;
 
   let res: Response;
   try {
