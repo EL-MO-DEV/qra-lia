@@ -7,6 +7,7 @@ import { MOCK_OK, MOCK_SCAM } from "@/lib/mock";
 import { buildShareText } from "@/lib/share";
 import type { ReadResult } from "@/lib/types";
 import VoiceDebug from "./VoiceDebug";
+import VoicePicker from "./VoicePicker";
 
 // Dev-only test bench for the feature buttons (Part B). Not linked from the app.
 export const metadata: Metadata = {
@@ -34,6 +35,7 @@ export default function DevFeaturesPage() {
       <h1 className="text-2xl font-bold">🧪 Dev features</h1>
 
       <InstallPrompt />
+      <VoicePicker />
       <VoiceDebug />
 
       {CASES.map(({ name, result }) => (
