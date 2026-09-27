@@ -5,19 +5,22 @@ type SafetyNoteProps = {
 
 /**
  * "If this paper matters, double check with someone you trust."
- * Rendered as a quiet row at the bottom of the result card by default,
- * or as a yellow banner at the top when confidence < 0.6.
+ * Quiet row at the bottom of the result by default,
+ * or a yellow banner at the top when confidence < 0.6.
  */
 export default function SafetyNote({ urgent = false }: SafetyNoteProps) {
   return (
-    <div
-      className={urgent ? "safety-note safety-note-urgent" : "safety-note"}
-      role={urgent ? "alert" : undefined}
-    >
-      <span className="safety-note-icon" aria-hidden="true">
-        {urgent ? "⚠️" : "🛈"}
+    <div className={urgent ? "safety safety-urgent" : "safety"} role={urgent ? "alert" : undefined}>
+      <span className="safety-icon" aria-hidden="true">
+        {urgent ? "⚠️" : "🤝"}
       </span>
-      <p dir="rtl">إلا كانت الورقة مهمة، تأكد مع شي حد تيق فيه</p>
+      <p>
+        {urgent ? "ما متأكدينش مزيان من هاد القراية. " : ""}
+        إلا كانت الورقة مهمة، تأكد مع شي حد تيق فيه.
+        <span className="fr" lang="fr">
+          {urgent ? "Lecture incertaine — " : ""}Si le document est important, vérifiez avec une personne de confiance.
+        </span>
+      </p>
     </div>
   );
 }

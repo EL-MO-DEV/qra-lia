@@ -1,27 +1,45 @@
 "use client";
 
+import { useState } from "react";
+import { downloadIcs } from "@/lib/ics";
 import type { ReadResult } from "@/lib/types";
 
-// STUB — final props (Part B §B3). Real .ics download lands next sprint.
-// Already final: renders nothing without a deadline or once the deadline has passed.
 type Props = { result: ReadResult };
 
+/** Calendar reminder 2 days before the deadline. Renders nothing without a deadline or once it has passed. */
 export function ReminderButton({ result }: Props) {
+  const [done, setDone] = useState(false);
+
   if (!result.deadline || result.days_left === null || result.days_left < 0) {
     return null;
   }
 
   return (
-    <button
-      type="button"
-      className="flex min-h-14 w-full items-center gap-3 rounded-2xl border-2 border-current px-5 py-3 text-start focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-current"
-    >
-      <span aria-hidden="true" className="text-2xl">⏰</span>
-      <span className="flex flex-col items-start">
-        <span className="text-xl font-bold">فكّرني قبل الأجل</span>
-        <span dir="ltr" lang="fr" className="text-sm opacity-80">Me rappeler</span>
-      </span>
-    </button>
+    <>
+      <button
+        type="button"
+        className="feature-btn"
+        onClick={() => {
+          downloadIcs(result);
+          setDone(true);
+        }}
+      >
+        <span className="feature-btn-icon" aria-hidden="true">
+          ⏰
+        </span>
+        <span className="feature-btn-text">
+          <span className="feature-btn-label">فكّرني قبل الأجل</span>
+          <span className="feature-btn-sub" lang="fr">
+            Me rappeler (2 jours avant)
+          </span>
+        </span>
+      </button>
+      {done && (
+        <p className="feature-toast" role="status">
+          ✅ تزاد التذكير فالكاليندري ديالك
+        </p>
+      )}
+    </>
   );
 }
 

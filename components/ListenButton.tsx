@@ -39,9 +39,9 @@ export function ListenButton({ text }: Props) {
 
   if (!voice) {
     return (
-      <p className="text-center text-base opacity-80">
-        الصوت ما متوفرش فهاد التيليفون
-        <span dir="ltr" lang="fr" className="block text-sm">
+      <p className="feature-note">
+        🔇 الصوت ما متوفرش فهاد التيليفون
+        <span className="fr" lang="fr">
           Voix non disponible sur cet appareil
         </span>
       </p>
@@ -62,18 +62,14 @@ export function ListenButton({ text }: Props) {
   };
 
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="flex min-h-14 w-full items-center gap-3 rounded-2xl border-2 border-current px-5 py-3 text-start focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-current"
-    >
-      <span aria-hidden="true" className="text-2xl">
+    <button type="button" onClick={onClick} className="feature-btn feature-btn-primary">
+      <span className="feature-btn-icon" aria-hidden="true">
         {speaking ? "⏹️" : "🔊"}
       </span>
-      <span className="flex flex-col items-start">
-        <span className="text-xl font-bold">{speaking ? "وقّف" : "سمع الشرح"}</span>
-        <span dir="ltr" lang="fr" className="text-sm opacity-80">
-          {speaking ? "Arrêter" : "Écouter"}
+      <span className="feature-btn-text">
+        <span className="feature-btn-label">{speaking ? "وقّف" : "سمع الشرح"}</span>
+        <span className="feature-btn-sub" lang="fr">
+          {speaking ? "Arrêter" : "Écouter l'explication"}
         </span>
       </span>
     </button>
