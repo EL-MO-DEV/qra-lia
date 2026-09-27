@@ -1,26 +1,458 @@
 @import "tailwindcss";
 
+/* ---------- Design tokens ---------- */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+  --color-bg: #f6f4ef;
+  --color-surface: #ffffff;
+  --color-text: #1c1b19;
+  --color-text-muted: #55524a;
+  --color-primary: #0e6b5c; /* calm teal-green, trustworthy, not a "Moroccan tile" cliché */
+  --color-primary-contrast: #ffffff;
+  --color-border: #e3ddce;
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-badge-low-bg: #e4f5ea;
+  --color-badge-low-fg: #146c3f;
+  --color-badge-medium-bg: #fdf1de;
+  --color-badge-medium-fg: #8a5a10;
+  --color-badge-high-bg: #fbe6e5;
+  --color-badge-high-fg: #a3231c;
+
+  --color-danger-bg: #fbe6e5;
+  --color-danger-border: #d9433a;
+  --color-danger-fg: #7a1a15;
+  --color-warning-bg: #fdf1de;
+  --color-warning-border: #d99a2b;
+  --color-warning-fg: #6b4a10;
+
+  --radius-md: 14px;
+  --radius-lg: 20px;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+
+  /* --font-qra is provided by Moncef's font setup (next/font) — the whole
+     page is RTL, so we use one font token everywhere instead of a
+     separate Arabic/Latin split. */
+  --font-sans: var(--font-qra), system-ui, sans-serif;
+
+  --focus-ring: 0 0 0 3px rgba(14, 107, 92, 0.45);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --color-bg: #14171a;
+    --color-surface: #1e2226;
+    --color-text: #f2f1ee;
+    --color-text-muted: #b9b6ac;
+    --color-primary: #34c2a3;
+    --color-primary-contrast: #08201b;
+    --color-border: #2c3136;
+
+    --color-badge-low-bg: #143224;
+    --color-badge-low-fg: #6fdba0;
+    --color-badge-medium-bg: #33270f;
+    --color-badge-medium-fg: #f0b95a;
+    --color-badge-high-bg: #351613;
+    --color-badge-high-fg: #ff9b93;
+
+    --color-danger-bg: #351613;
+    --color-danger-border: #ff6a5f;
+    --color-danger-fg: #ffb3ac;
+    --color-warning-bg: #33270f;
+    --color-warning-border: #f0b95a;
+    --color-warning-fg: #ffdda3;
+
+    --focus-ring: 0 0 0 3px rgba(52, 194, 163, 0.55);
   }
 }
 
+* {
+  box-sizing: border-box;
+}
+
+html,
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  padding: 0;
+  margin: 0;
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  font-size: 20px; /* body text >= 20px for elderly users */
+  line-height: 1.5;
+  min-height: 100dvh;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom)
+    env(safe-area-inset-left);
+}
+
+/* Page is fully RTL — [dir="rtl"] blocks just get the taller line-height,
+   the font itself is already --font-sans everywhere. */
+[dir="rtl"] {
+  line-height: 1.8;
+}
+
+a,
+button {
+  font-family: inherit;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+.page {
+  max-width: 480px;
+  margin: 0 auto;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-5) var(--space-4);
+}
+
+/* ---------- Buttons ---------- */
+.btn {
+  min-height: 56px;
+  width: 100%;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: 20px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  cursor: pointer;
+}
+
+.btn-primary {
+  background: var(--color-primary);
+  color: var(--color-primary-contrast);
+}
+
+.btn-secondary {
+  background: var(--color-surface);
+  color: var(--color-primary);
+  border: 2px solid var(--color-primary);
+  margin-top: var(--space-5);
+}
+
+.btn-feature {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+  min-height: 56px;
+  flex: 1;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  font-size: 18px;
+}
+
+/* ---------- Upload panel (home screen) ---------- */
+.upload-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  gap: var(--space-5);
+}
+
+.btn-camera {
+  min-height: 140px;
+  flex-direction: column;
+  border-radius: var(--radius-lg);
+  gap: var(--space-2);
+  box-shadow: 0 10px 30px rgba(14, 107, 92, 0.25);
+}
+
+.btn-camera-icon {
+  font-size: 48px;
+}
+
+.btn-camera-labels {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.btn-camera-main {
+  font-size: 24px;
+}
+
+.btn-camera-sub {
+  font-size: 14px;
+  opacity: 0.85;
+  font-weight: 400;
+}
+
+.link-gallery {
+  background: none;
+  border: none;
+  color: var(--color-text);
+  font-size: 20px;
+  min-height: 56px;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.link-gallery-sub {
+  font-size: 14px;
+  color: var(--color-text-muted);
+}
+
+.reassurance {
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.reassurance-sub {
+  font-size: 13px;
+}
+
+/* ---------- Loading screen ---------- */
+.loading-screen {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  text-align: center;
+}
+
+.loading-thumbnail {
+  width: 120px;
+  height: 120px;
+  object-fit: cover;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+}
+
+.spinner {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 5px solid var(--color-border);
+  border-top-color: var(--color-primary);
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loading-text,
+.loading-patience {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-size: 22px;
+}
+
+.loading-text-sub {
+  font-size: 14px;
+  color: var(--color-text-muted);
+}
+
+/* ---------- Result card ---------- */
+.result-screen {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.result-card {
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.risk-badge {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  border-radius: 999px;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.badge-low {
+  background: var(--color-badge-low-bg);
+  color: var(--color-badge-low-fg);
+}
+
+.badge-medium {
+  background: var(--color-badge-medium-bg);
+  color: var(--color-badge-medium-fg);
+}
+
+.badge-high {
+  background: var(--color-badge-high-bg);
+  color: var(--color-badge-high-fg);
+}
+
+.scam-banner {
+  background: var(--color-danger-bg);
+  border: 2px solid var(--color-danger-border);
+  color: var(--color-danger-fg);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  font-size: 18px;
+}
+
+.scam-banner ul {
+  margin: var(--space-2) 0 0;
+  padding-inline-start: 20px;
+}
+
+.row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.row-doc-info .doc-type {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.row-doc-info .sender {
+  font-size: 18px;
+  color: var(--color-text-muted);
+}
+
+.row-amount-deadline {
+  background: var(--color-bg);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  align-items: center;
+  text-align: center;
+}
+
+.row-amount-deadline .amount {
+  font-size: 36px;
+  font-weight: 800;
+  margin: 0;
+}
+
+.row-amount-deadline .deadline {
+  font-size: 22px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.row-amount-deadline .days-left {
+  font-size: 18px;
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
+.row-action {
+  flex-direction: row;
+  align-items: flex-start;
+  gap: var(--space-2);
+  font-size: 20px;
+}
+
+.row-summary p {
+  font-size: 20px;
+  margin: 0;
+}
+
+.row-feature-buttons {
+  flex-direction: row;
+  gap: var(--space-2);
+}
+
+.safety-note {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-text-muted);
+  font-size: 16px;
+  padding: var(--space-2);
+}
+
+.safety-note-urgent {
+  background: var(--color-warning-bg);
+  border: 2px solid var(--color-warning-border);
+  color: var(--color-warning-fg);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  font-size: 18px;
+  margin-bottom: var(--space-4);
+}
+
+/* ---------- Error screen ---------- */
+.error-screen {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.error-card {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+  text-align: center;
+}
+
+.error-icon {
+  font-size: 48px;
+  margin: 0;
+}
+
+.error-message {
+  font-size: 22px;
+  margin: 0;
+}
+
+.error-tips {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  font-size: 18px;
+  color: var(--color-text-muted);
 }
