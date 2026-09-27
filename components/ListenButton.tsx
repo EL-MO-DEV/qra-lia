@@ -20,6 +20,7 @@ type Props = {
 export function ListenButton({ text, label = "سمع الشرح", sub = "Écouter l'explication", prefetch = true }: Props) {
   const [browserVoice, setBrowserVoice] = useState<SpeechSynthesisVoice | null>(null);
   const [playing, setPlaying] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [unavailable, setUnavailable] = useState(false);
   const owns = useRef(false);
 
@@ -39,6 +40,7 @@ export function ListenButton({ text, label = "سمع الشرح", sub = "Écoute
   const finish = () => {
     owns.current = false;
     setPlaying(false);
+    setLoading(false);
   };
 
   const onClick = async () => {
@@ -50,13 +52,15 @@ export function ListenButton({ text, label = "سمع الشرح", sub = "Écoute
     }
     owns.current = true;
     setPlaying(true);
+    setLoading(true);
     setUnavailable(false);
     try {
-      await playVoice(text);
+      await playVoice(text, undefined, () => setLoading(false));
       finish();
     } catch {
       // Server voice failed (quota, network): use the phone's voice if it has an Arabic one.
       if (browserVoice && owns.current) {
+        setLoading(false);
         speak(text, browserVoice, finish);
       } else {
         finish();
@@ -69,12 +73,12 @@ export function ListenButton({ text, label = "سمع الشرح", sub = "Écoute
     <>
       <button type="button" onClick={onClick} className="feature-btn feature-btn-primary" aria-live="polite">
         <span className="feature-btn-icon" aria-hidden="true">
-          {playing ? "⏹️" : "🔊"}
+          {loading ? "⏳" : playing ? "⏹️" : "🔊"}
         </span>
         <span className="feature-btn-text">
-          <span className="feature-btn-label">{playing ? "وقّف" : label}</span>
+          <span className="feature-btn-label">{loading ? "كنوجد الصوت… (وقّف)" : playing ? "وقّف" : label}</span>
           <span className="feature-btn-sub" lang="fr">
-            {playing ? "Arrêter" : sub}
+            {loading ? "Préparation de la voix…" : playing ? "Arrêter" : sub}
           </span>
         </span>
       </button>

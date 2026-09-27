@@ -6,16 +6,27 @@ import { VOICES } from "@/lib/voices";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
-const TIMEOUT_MS = 25_000;
+const TIMEOUT_MS = 45_000; // long texts (whole page) take ~20 s to synthesize
 const MAX_CHARS = 1200;
 const RATE_LIMIT_PER_MINUTE = 20;
-const DEFAULT_MODELS = "gemini-3.8-flash-tts,gemini-3.8-flash-lite-tts";
+// Flash only: the -lite model was observed reading the style instruction aloud (audio twice as long).
+const DEFAULT_MODELS = "gemini-3.8-flash-tts";
 const DEFAULT_VOICE: string = VOICES[0];
 
 // Style direction for the TTS model (not read aloud).
 const STYLE =
   "Read the following Moroccan Darija text aloud with a natural Moroccan accent (like a person from Casablanca), " +
   "warm, calm and clear, a little slowly, like explaining a paper to an elderly parent. Read only the text:";
+
+// Same text + voice → same audio: keep recent results in memory (per server instance)
+// so repeated texts (the home page narration) don't spend the TTS quota again.
+const audioCache = new Map<string, Buffer>();
+const AUDIO_CACHE_MAX = 30;
+function remember(key: string, wav: Buffer) {
+  audioCache.delete(key);
+  audioCache.set(key, wav);
+  if (audioCache.size > AUDIO_CACHE_MAX) audioCache.delete(audioCache.keys().next().value as string);
+}
 
 const hits = new Map<string, number[]>();
 function rateLimited(ip: string): boolean {
@@ -77,6 +88,13 @@ export async function POST(request: Request) {
   const envVoice = process.env.GEMINI_TTS_VOICE?.trim() || DEFAULT_VOICE;
   const voice = typeof body.voice === "string" && (VOICES as readonly string[]).includes(body.voice) ? body.voice : envVoice;
 
+  const cacheKey = `${voice}|${text}`;
+  const cached = audioCache.get(cacheKey);
+  if (cached) {
+    console.info(JSON.stringify({ route: "tts", voice, chars: text.length, cache: "hit" }));
+    return new Response(new Uint8Array(cached), { headers: { "Content-Type": "audio/wav", "Cache-Control": "private, max-age=3600" } });
+  }
+
   const models = (process.env.GEMINI_TTS_MODEL?.trim() || DEFAULT_MODELS).split(",").map((m) => m.trim()).filter(Boolean);
   const started = Date.now();
   let lastError = "no attempt";
@@ -111,6 +129,7 @@ export async function POST(request: Request) {
       const raw = Buffer.from(inline.data, "base64");
       const mime = inline.mimeType ?? "";
       const wav = /wav/i.test(mime) ? raw : pcmToWav(raw, Number(/rate=(\d+)/.exec(mime)?.[1] ?? 24000));
+      remember(cacheKey, wav);
       // Never log the text.
       console.info(JSON.stringify({ route: "tts", model, voice, chars: text.length, ms: Date.now() - started, bytes: wav.length }));
       return new Response(new Uint8Array(wav), {

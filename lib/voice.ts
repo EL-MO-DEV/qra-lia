@@ -43,7 +43,7 @@ let current: { stop: () => void } | null = null;
  * Play the server voice. Call from a tap handler. Resolves when playback ends or is stopped;
  * rejects if the audio could not be fetched/played (caller falls back to the browser voice).
  */
-export async function playVoice(text: string, voice?: string): Promise<void> {
+export async function playVoice(text: string, voice?: string, onStart?: () => void): Promise<void> {
   stopVoice();
   const audio = getPlayer();
   // Unlock inside the gesture (iOS), then swap in the real audio.
@@ -63,6 +63,7 @@ export async function playVoice(text: string, voice?: string): Promise<void> {
       .then((url) => {
         if (stopped) return;
         audio.src = url;
+        audio.onplaying = () => onStart?.();
         audio.onended = () => resolve();
         audio.onerror = () => reject(new Error("audio error"));
         return audio.play();
