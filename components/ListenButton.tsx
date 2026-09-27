@@ -4,13 +4,20 @@ import { useEffect, useRef, useState } from "react";
 import { speak, stopSpeaking, watchArabicVoice } from "@/lib/tts";
 import { playVoice, prefetchVoice, stopVoice } from "@/lib/voice";
 
-type Props = { text: string };
+type Props = {
+  text: string;
+  /** Darija label + French subtitle (default: "سمع الشرح" / "Écouter l'explication"). */
+  label?: string;
+  sub?: string;
+  /** Download the audio before the tap (default true). Off on the home page to save TTS quota. */
+  prefetch?: boolean;
+};
 
 /**
  * 🔊 Listen. Plays the server voice (Gemini TTS: one natural voice, same on every phone),
  * downloaded as soon as the result shows. Falls back to the phone's Arabic voice if it fails.
  */
-export function ListenButton({ text }: Props) {
+export function ListenButton({ text, label = "سمع الشرح", sub = "Écouter l'explication", prefetch = true }: Props) {
   const [browserVoice, setBrowserVoice] = useState<SpeechSynthesisVoice | null>(null);
   const [playing, setPlaying] = useState(false);
   const [unavailable, setUnavailable] = useState(false);
@@ -20,14 +27,14 @@ export function ListenButton({ text }: Props) {
 
   // New document: start downloading its audio now; stop our playback on change/unmount.
   useEffect(() => {
-    prefetchVoice(text).catch(() => {});
+    if (prefetch) prefetchVoice(text).catch(() => {});
     return () => {
       if (owns.current) {
         stopVoice();
         stopSpeaking();
       }
     };
-  }, [text]);
+  }, [text, prefetch]);
 
   const finish = () => {
     owns.current = false;
@@ -65,9 +72,9 @@ export function ListenButton({ text }: Props) {
           {playing ? "⏹️" : "🔊"}
         </span>
         <span className="feature-btn-text">
-          <span className="feature-btn-label">{playing ? "وقّف" : "سمع الشرح"}</span>
+          <span className="feature-btn-label">{playing ? "وقّف" : label}</span>
           <span className="feature-btn-sub" lang="fr">
-            {playing ? "Arrêter" : "Écouter l'explication"}
+            {playing ? "Arrêter" : sub}
           </span>
         </span>
       </button>

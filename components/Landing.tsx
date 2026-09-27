@@ -1,4 +1,15 @@
+import ListenButton from "./ListenButton";
 import UploadPanel from "./UploadPanel";
+
+// Spoken version of the whole home page, for people who can't read it.
+const PAGE_NARRATION =
+  "مرحبا بيك فاقرا ليا. هاد التطبيق كيقرا ليك الأوراق ديالك وكيشرحها ليك بالدارجة. " +
+  "صوّر أي ورقة: فاتورة ديال الضو والما، رسالة ديال البنكة، الضمان الاجتماعي ولا الإدارة. " +
+  "غادي نقولو ليك شنو هي هاد الورقة، شكون صيفطها، شحال خاصك تخلّص وفوقاش، وشنو خاصك دير. " +
+  "وإلا كانت فيها علامات ديال النصب، بحال إلا طلبو منك الكود ديال الكارط، غادي نحذروك. " +
+  "تقدر تسمع الشرح بالصوت، وتصيفطو لشي حد من العائلة، وتزيد تذكير قبل الأجل. " +
+  "التصويرة ما كتحفظش عندنا. وإلا كانت الورقة مهمة، تأكد ديما مع شي حد تيق فيه. " +
+  "باش تبدا، ورك على الزر الكبير الأخضر: صوّر الورقة.";
 
 type LandingProps = {
   onFileChosen: (file: File) => void;
@@ -25,6 +36,14 @@ export default function Landing({ onFileChosen }: LandingProps) {
       <section className="hero" id="start">
         <div className="container hero-grid">
           <div className="reveal">
+            <div style={{ marginBottom: 18 }}>
+              <ListenButton
+                text={PAGE_NARRATION}
+                label="سمع شنو هو هاد التطبيق"
+                sub="Écouter la présentation"
+                prefetch={false}
+              />
+            </div>
             <span className="eyebrow">
               <span aria-hidden="true">✨</span> مساعد ذكي للأوراق ديالك
             </span>

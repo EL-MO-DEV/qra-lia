@@ -26,6 +26,22 @@ function daysLeftPill(daysLeft: number | null) {
   return { text: `بقاو ${daysLeft} يوم`, className: "pill", icon: "📅" };
 }
 
+/** Everything on the card as one spoken text, read by the top 🔊 button. */
+function spokenResult(result: ReadResult, pill: ReturnType<typeof daysLeftPill>): string {
+  const parts: string[] = [];
+  if (result.scam_suspected) parts.push("رد البال! هاد الورقة فيها علامات ديال النصب.");
+  else parts.push(`مستوى الخطر: ${RISK[result.risk_level].label}.`);
+  if (result.doc_type) parts.push(`هادي ${result.doc_type}${result.sender ? ` من ${result.sender}` : ""}.`);
+  if (result.amount) parts.push(`المبلغ: ${formatAmount(result.amount)}.`);
+  if (result.deadline) parts.push(`الأجل: قبل ${formatDeadline(result.deadline)}${pill ? `، ${pill.text}` : ""}.`);
+  if (result.action) parts.push(`شنو خاصك دير: ${result.action}.`);
+  parts.push(result.darija_summary);
+  parts.push("وإلا كانت الورقة مهمة، تأكد مع شي حد تيق فيه.");
+  const full = parts.join(" ");
+  // /api/tts accepts up to 1200 characters.
+  return full.length <= 1150 ? full : result.darija_summary.slice(0, 1150);
+}
+
 export default function ResultCard({ result, onRetake, previewUrl }: ResultCardProps) {
   const risk = RISK[result.risk_level];
   const pill = daysLeftPill(result.days_left);
@@ -35,6 +51,9 @@ export default function ResultCard({ result, onRetake, previewUrl }: ResultCardP
 
   return (
     <div className="result">
+      {/* Read the whole card aloud: first thing on the screen */}
+      <ListenButton text={spokenResult(result, pill)} label="سمع كلشي بالصوت" sub="Tout écouter" />
+
       {lowConfidence && <SafetyNote urgent />}
 
       {result.scam_suspected && (
@@ -113,9 +132,8 @@ export default function ResultCard({ result, onRetake, previewUrl }: ResultCardP
         </div>
       )}
 
-      {/* 6. Listen / Share / Reminder */}
+      {/* 6. Share / Reminder (Listen is at the top) */}
       <div className="actions">
-        <ListenButton text={result.darija_summary} />
         <ShareButton result={result} />
         <ReminderButton result={result} />
       </div>
