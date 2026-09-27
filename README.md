@@ -92,7 +92,7 @@ Automated tests: `npm test` runs 15 unit tests (masking, risk rules, JSON parser
 - **Next.js 16** (App Router) + TypeScript + Tailwind CSS 4, deployed on **Vercel**
 - **Google Gemini 3.8 Flash** for vision, extraction and the Darija explanation
 - **Groq**, running **Qwen 3.8 27B** (vision), as the automatic fallback
-- **Gemini 3.8 Flash TTS** for the voice ("Sulafat"), with the Web Speech API as fallback
+- **Gemini 3.8 Flash TTS** for the voice ("Sulafat"), then Groq Orpheus TTS, then the Web Speech API as fallbacks
 - **zod** for validating the model output
 - No database, no auth, no file storage
 
@@ -141,7 +141,7 @@ Useful URLs:
 - **Google Gemini 3.8 Flash** reads document photos, extracts structured fields and writes the Darija explanation.
 - **Groq (Qwen 3.8 27B)** is the automatic fallback.
 - **Deterministic code rules** (deadlines, legal keywords, scam signs, number masking) complement the model's risk assessment.
-- **The voice** is **Gemini 3.8 Flash TTS** (voice "Sulafat"), with the browser Web Speech API as fallback.
+- **The voice** is **Gemini 3.8 Flash TTS** (voice "Sulafat"), with **Groq Orpheus TTS** and then the browser Web Speech API as fallbacks.
 - **Claude Code** (Anthropic) was used as a coding assistant. The team did the product decisions, architecture, prompts and testing.
 - No images or personal data are stored.
 - NVIDIA Brev was not used: the credit request deadline had passed.

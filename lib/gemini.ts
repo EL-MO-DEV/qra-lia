@@ -70,11 +70,17 @@ async function call(
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+// Quota exhausted (429 RESOURCE_EXHAUSTED "exceeded your current quota"): retrying only burns
+// seconds before the Groq fallback. Skip Gemini on this instance for a while instead.
+const QUOTA_COOLDOWN_MS = 5 * 60_000;
+let quotaCooldownUntil = 0;
+
 /** Throws ProviderError (network/HTTP) or InvalidModelOutput (bad JSON, worth one retry). */
 export async function extractWithGemini(
   imageBase64: string, mimeType: string, retry = false, lang: Lang = "ar",
 ): Promise<ModelExtraction> {
   if (!geminiEnabled()) throw new ProviderError("gemini disabled");
+  if (Date.now() < quotaCooldownUntil) throw new ProviderError("gemini skipped: quota exhausted recently");
   const started = Date.now();
   const timeLeft = () => BUDGET_MS - (Date.now() - started);
   let lastError = "no attempt";
@@ -94,6 +100,7 @@ export async function extractWithGemini(
       }
 
       if (res.ok) {
+        quotaCooldownUntil = 0; // a backup model still has quota: keep using Gemini
         const data = (await res.json().catch(() => ({}))) as GeminiResponse;
         const text = data.candidates?.[0]?.content?.parts
           ?.filter((p) => !p.thought)
@@ -102,7 +109,12 @@ export async function extractWithGemini(
         return parseModelOutput(text);
       }
 
-      lastError = `http ${res.status}: ${await providerErrorDetail(res)} (model ${model})`;
+      const detail = await providerErrorDetail(res);
+      lastError = `http ${res.status}: ${detail} (model ${model})`;
+      if (res.status === 429 && /quota/i.test(detail)) {
+        quotaCooldownUntil = Date.now() + QUOTA_COOLDOWN_MS;
+        break; // backup models have their own quota: try them now, skip Gemini on later requests
+      }
       if (!RETRY_STATUSES.includes(res.status)) break; // 404, 403…: next model
       if (attempt < BACKOFF_MS.length) await sleep(BACKOFF_MS[attempt]);
     }
