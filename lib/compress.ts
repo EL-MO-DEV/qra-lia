@@ -19,7 +19,6 @@ async function getBitmapOrImage(
 ): Promise<ImageBitmap | HTMLImageElement> {
   if (typeof createImageBitmap === "function") {
     try {
-      // @ts-expect-error - imageOrientation is supported in modern browsers, not always typed
       return await createImageBitmap(file, { imageOrientation: "from-image" });
     } catch {
       // fall through to <img> based decoding

@@ -1,10 +1,8 @@
 import type { ReadResult } from "@/lib/types";
 import SafetyNote from "./SafetyNote";
-// TEMPORARY placeholders — Moncef's real ListenButton/ShareButton/
-// ReminderButton files weren't found in components/ yet (checked and got
-// "Module not found"). Swap this single import line for the real ones as
-// soon as you know the actual filenames — nothing else needs to change.
-import { ListenButton, ReminderButton, ShareButton } from "./FeatureButtons";
+import ListenButton from "./ListenButton";
+import ReminderButton from "./ReminderButton";
+import ShareButton from "./ShareButton";
 
 type ResultCardProps = {
   result: ReadResult;

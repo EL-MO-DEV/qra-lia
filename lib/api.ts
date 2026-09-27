@@ -1,5 +1,8 @@
 import type { ApiError, ReadRequest, ReadResult } from "./types";
 
+/** ApiError from the server, or the frontend-only "network" code (not part of the shared contract). */
+export type ClientError = ApiError | { error: "network"; darija_message?: undefined };
+
 const TIMEOUT_MS = 30_000;
 
 /**
@@ -37,7 +40,7 @@ export async function readDocument(req: ReadRequest): Promise<ReadResult> {
       throw err as ApiError;
     }
     // AbortError (timeout) or any other network failure
-    throw { error: "network" } as ApiError;
+    throw { error: "network" } satisfies ClientError;
   } finally {
     clearTimeout(timeoutId);
   }

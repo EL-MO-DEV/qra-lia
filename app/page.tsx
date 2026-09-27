@@ -7,9 +7,9 @@ import Loading from "@/components/Loading";
 import ResultCard from "@/components/ResultCard";
 import ErrorState, { ErrorStateKind } from "@/components/ErrorState";
 import { compressImage } from "@/lib/compress";
-import { readDocument } from "@/lib/api";
+import { readDocument, type ClientError } from "@/lib/api";
 import { MOCK_OK, MOCK_SCAM, MOCK_UNREADABLE } from "@/lib/mock";
-import type { ApiError, ReadResult } from "@/lib/types";
+import type { ReadResult } from "@/lib/types";
 
 type State =
   | { screen: "idle" }
@@ -24,7 +24,7 @@ type Action =
   | { type: "RESULT_OK"; result: ReadResult }
   | { type: "RESULT_UNREADABLE" }
   | { type: "RESULT_NOT_A_DOCUMENT" }
-  | { type: "API_ERROR"; error: ApiError }
+  | { type: "API_ERROR"; error: ClientError }
   | { type: "RETRY" };
 
 function reducer(_state: State, action: Action): State {
@@ -106,7 +106,7 @@ function PageInner() {
           dispatch({ type: "RESULT_OK", result });
         }
       } catch (err) {
-        dispatch({ type: "API_ERROR", error: err as ApiError });
+        dispatch({ type: "API_ERROR", error: err as ClientError });
       }
     },
     [searchParams]

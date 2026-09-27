@@ -1,9 +1,9 @@
-import type { ApiError } from "@/lib/types";
+import type { ClientError } from "@/lib/api";
 
 export type ErrorStateKind =
   | { kind: "unreadable" }
   | { kind: "not_a_document" }
-  | { kind: "api"; error: ApiError };
+  | { kind: "api"; error: ClientError };
 
 type ErrorStateProps = {
   error: ErrorStateKind;
