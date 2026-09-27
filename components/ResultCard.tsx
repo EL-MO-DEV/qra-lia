@@ -38,8 +38,9 @@ function spokenResult(result: ReadResult, pill: ReturnType<typeof daysLeftPill>)
   parts.push(result.darija_summary);
   parts.push("وإلا كانت الورقة مهمة، تأكد مع شي حد تيق فيه.");
   const full = parts.join(" ");
-  // /api/tts accepts up to 1200 characters.
-  return full.length <= 1150 ? full : result.darija_summary.slice(0, 1150);
+  // /api/tts accepts up to 800 characters (~2 min of speech, under Vercel's 4.5 MB response cap).
+  if (full.length <= 800) return full;
+  return result.darija_summary.length <= 800 ? result.darija_summary : result.darija_summary.slice(0, 800);
 }
 
 export default function ResultCard({ result, onRetake, previewUrl }: ResultCardProps) {

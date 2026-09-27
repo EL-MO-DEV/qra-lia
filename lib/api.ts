@@ -3,7 +3,8 @@ import type { ApiError, ReadRequest, ReadResult } from "./types";
 /** ApiError from the server, or the frontend-only "network" code (not part of the shared contract). */
 export type ClientError = ApiError | { error: "network"; darija_message?: undefined };
 
-const TIMEOUT_MS = 30_000;
+// Server worst case: Gemini (16 s budget) + Groq fallback (12 s) + upload time on a slow phone network.
+const TIMEOUT_MS = 45_000;
 
 /**
  * Calls POST /api/read with the compressed photo.

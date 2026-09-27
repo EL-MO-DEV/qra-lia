@@ -1,7 +1,6 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useReducer, useRef } from "react";
-import { useSearchParams } from "next/navigation";
+import { useCallback, useEffect, useReducer, useRef, useSyncExternalStore } from "react";
 import BrandMark from "@/components/BrandMark";
 import Landing from "@/components/Landing";
 import Loading from "@/components/Loading";
@@ -64,20 +63,16 @@ function mockForParam(value: string | null): ReadResult | null {
   }
 }
 
-export default function Page() {
-  return (
-    // useSearchParams (for ?mock=...) needs a Suspense boundary in the App Router.
-    <Suspense fallback={null}>
-      <PageInner />
-    </Suspense>
-  );
-}
+// ?mock=ok|unreadable|scam, read on the client only. (useSearchParams would need a
+// Suspense boundary, which made the server send an empty page: slow first paint.)
+const noSubscribe = () => () => {};
+const readMockParam = () => new URLSearchParams(window.location.search).get("mock");
+const noMockOnServer = () => null;
 
-function PageInner() {
+export default function Page() {
   const [state, dispatch] = useReducer(reducer, { screen: "idle" });
-  const searchParams = useSearchParams();
   const previewUrlRef = useRef<string | null>(null);
-  const mockParam = searchParams?.get("mock") ?? null;
+  const mockParam = useSyncExternalStore(noSubscribe, readMockParam, noMockOnServer);
   const isDemo = mockForParam(mockParam) !== null;
 
   // Every screen change starts at the top (the landing page is long).

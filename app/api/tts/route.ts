@@ -1,4 +1,4 @@
-// POST /api/tts — Darija explanation → one fixed, natural voice (Gemini TTS) as WAV.
+// POST /api/tts — Darija explanation → one fixed, natural voice (Gemini TTS "Sulafat") as WAV.
 // Same voice on every phone (the browser voice differs per device and reads with a Standard Arabic accent).
 // The client falls back to the browser voice if this fails.
 import { VOICES } from "@/lib/voices";
@@ -6,8 +6,13 @@ import { VOICES } from "@/lib/voices";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
-const TIMEOUT_MS = 45_000; // long texts (whole page) take ~20 s to synthesize
-const MAX_CHARS = 1200;
+// Whole request budget, under maxDuration: synthesis of ~500 chars takes ~15–20 s.
+const BUDGET_MS = 52_000;
+// ~800 chars ≈ 2 min of speech ≈ 3.8 MB at 16 kHz — Vercel responses are capped at 4.5 MB.
+const MAX_CHARS = 800;
+const OUTPUT_RATE = 16_000;
+// Free-tier TTS allows only a few calls per minute: on 429, wait what Google asks (up to this) and retry.
+const MAX_RETRY_WAIT_MS = 25_000;
 const RATE_LIMIT_PER_MINUTE = 20;
 // Flash only: the -lite model was observed reading the style instruction aloud (audio twice as long).
 const DEFAULT_MODELS = "gemini-3.8-flash-tts";
@@ -37,6 +42,24 @@ function rateLimited(ip: string): boolean {
   return recent.length > RATE_LIMIT_PER_MINUTE;
 }
 
+/** Linear resampling of 16-bit little-endian mono PCM (24 kHz → 16 kHz keeps speech clear, 1/3 smaller). */
+function resample(pcm: Buffer, from: number, to: number): Buffer {
+  if (from === to) return pcm;
+  const input = new Int16Array(pcm.buffer, pcm.byteOffset, Math.floor(pcm.length / 2));
+  const outLength = Math.floor((input.length * to) / from);
+  const output = new Int16Array(outLength);
+  const ratio = from / to;
+  for (let i = 0; i < outLength; i++) {
+    const pos = i * ratio;
+    const j = Math.floor(pos);
+    const frac = pos - j;
+    const a = input[j] ?? 0;
+    const b = input[j + 1] ?? a;
+    output[i] = Math.round(a + (b - a) * frac);
+  }
+  return Buffer.from(output.buffer);
+}
+
 /** Wrap raw 16-bit little-endian mono PCM in a WAV header so every browser can play it. */
 function pcmToWav(pcm: Buffer, sampleRate: number): Buffer {
   const header = Buffer.alloc(44);
@@ -58,8 +81,17 @@ function pcmToWav(pcm: Buffer, sampleRate: number): Buffer {
 
 type TtsResponse = {
   candidates?: { content?: { parts?: { inlineData?: { mimeType?: string; data?: string } }[] } }[];
-  error?: { message?: string; status?: string };
+  error?: { message?: string; status?: string; details?: { "@type"?: string; retryDelay?: string }[] };
 };
+
+/** Google's RetryInfo ("34s") → ms; default 10 s when absent. */
+function retryDelayMs(data: TtsResponse): number {
+  const delay = data.error?.details?.find((d) => d["@type"]?.includes("RetryInfo"))?.retryDelay;
+  const seconds = delay ? parseFloat(delay) : NaN;
+  return Number.isFinite(seconds) ? Math.ceil(seconds * 1000) + 500 : 10_000;
+}
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 function fail(status: number, error: string, detail?: string) {
   console.warn(JSON.stringify({ route: "tts", error, detail }));
@@ -98,46 +130,64 @@ export async function POST(request: Request) {
 
   const models = (process.env.GEMINI_TTS_MODEL?.trim() || DEFAULT_MODELS).split(",").map((m) => m.trim()).filter(Boolean);
   const started = Date.now();
+  const timeLeft = () => BUDGET_MS - (Date.now() - started);
   let lastError = "no attempt";
+  let retries = 0;
 
   for (const model of models) {
-    try {
-      const res = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "x-goog-api-key": key },
-          signal: AbortSignal.timeout(TIMEOUT_MS),
-          body: JSON.stringify({
-            contents: [{ role: "user", parts: [{ text: `${STYLE}\n\n${text}` }] }],
-            generationConfig: {
-              responseModalities: ["AUDIO"],
-              speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: voice } } },
-            },
-          }),
-        },
-      );
-      const data = (await res.json().catch(() => ({}))) as TtsResponse;
-      if (!res.ok) {
-        lastError = `http ${res.status}: ${data.error?.status ?? ""} ${data.error?.message ?? ""}`.slice(0, 220) + ` (model ${model})`;
-        continue;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      if (timeLeft() < 8_000) return fail(502, "tts_unavailable", `out of time, last: ${lastError}`);
+      try {
+        const res = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "x-goog-api-key": key },
+            signal: AbortSignal.timeout(timeLeft()),
+            body: JSON.stringify({
+              contents: [{ role: "user", parts: [{ text: `${STYLE}\n\n${text}` }] }],
+              generationConfig: {
+                responseModalities: ["AUDIO"],
+                speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: voice } } },
+              },
+            }),
+          },
+        );
+        const data = (await res.json().catch(() => ({}))) as TtsResponse;
+        if (res.status === 429) {
+          // Per-minute quota: wait what Google asks, then retry the same model (never log the text).
+          const wait = retryDelayMs(data);
+          lastError = `http 429 (retry in ${wait} ms) (model ${model})`;
+          if (wait > MAX_RETRY_WAIT_MS || wait > timeLeft() - 15_000) break;
+          retries++;
+          await sleep(wait);
+          continue;
+        }
+        if (!res.ok) {
+          lastError = `http ${res.status}: ${data.error?.status ?? ""} ${data.error?.message ?? ""}`.slice(0, 220) + ` (model ${model})`;
+          break;
+        }
+        const inline = data.candidates?.[0]?.content?.parts?.find((p) => p.inlineData?.data)?.inlineData;
+        if (!inline?.data) {
+          lastError = `no audio in response (model ${model})`;
+          break;
+        }
+        const raw = Buffer.from(inline.data, "base64");
+        const mime = inline.mimeType ?? "";
+        const wav = /wav/i.test(mime)
+          ? raw
+          : pcmToWav(resample(raw, Number(/rate=(\d+)/.exec(mime)?.[1] ?? 24000), OUTPUT_RATE), OUTPUT_RATE);
+        remember(cacheKey, wav);
+        console.info(
+          JSON.stringify({ route: "tts", model, voice, chars: text.length, ms: Date.now() - started, bytes: wav.length, retries }),
+        );
+        return new Response(new Uint8Array(wav), {
+          headers: { "Content-Type": "audio/wav", "Cache-Control": "private, max-age=3600" },
+        });
+      } catch (e) {
+        lastError = `${e instanceof Error ? `${e.name}: ${e.message}` : "error"} (model ${model})`;
+        break;
       }
-      const inline = data.candidates?.[0]?.content?.parts?.find((p) => p.inlineData?.data)?.inlineData;
-      if (!inline?.data) {
-        lastError = `no audio in response (model ${model})`;
-        continue;
-      }
-      const raw = Buffer.from(inline.data, "base64");
-      const mime = inline.mimeType ?? "";
-      const wav = /wav/i.test(mime) ? raw : pcmToWav(raw, Number(/rate=(\d+)/.exec(mime)?.[1] ?? 24000));
-      remember(cacheKey, wav);
-      // Never log the text.
-      console.info(JSON.stringify({ route: "tts", model, voice, chars: text.length, ms: Date.now() - started, bytes: wav.length }));
-      return new Response(new Uint8Array(wav), {
-        headers: { "Content-Type": "audio/wav", "Cache-Control": "private, max-age=3600" },
-      });
-    } catch (e) {
-      lastError = `${e instanceof Error ? `${e.name}: ${e.message}` : "error"} (model ${model})`;
     }
   }
   return fail(502, "tts_unavailable", lastError);
