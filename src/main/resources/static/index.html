@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>اقرا ليا — API</title>
+  <style>
+    :root { --ink:#1a1f16; --paper:#f4efe4; --accent:#c45c26; --ok:#2f6b3c; }
+    body { font-family: "Segoe UI", Tahoma, sans-serif; margin:0; background:var(--paper); color:var(--ink); }
+    main { max-width: 880px; margin: 0 auto; padding: 24px 16px 64px; }
+    h1 { font-size: 1.6rem; margin: 0 0 8px; }
+    p { line-height: 1.6; }
+    .card { background:#fff; border-radius:16px; padding:18px; box-shadow: 0 8px 24px rgba(0,0,0,.06); margin-top:16px; }
+    button, select { font: inherit; padding: 10px 14px; border-radius: 10px; border: 1px solid #ccc; }
+    button.primary { background: var(--accent); color:#fff; border:0; cursor:pointer; }
+    pre { overflow:auto; background:#1a1f16; color:#f4efe4; padding:12px; border-radius:12px; direction:ltr; text-align:left; }
+    .row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>اقرا ليا — Backend</h1>
+    <p>صوّر ورقة (فاتورة، رسالة بنك…) والـ API كيرجع JSON: شنو هي، شحال، الأجل، مستوى الخطر، وشنو خاصك دير. التطبيق عمرّو ما كيقول «هادشي 100% سليم».</p>
+    <div class="card">
+      <div class="row">
+        <input id="file" type="file" accept="image/jpeg,image/png,image/webp" />
+        <select id="scenario">
+          <option value="">سيناريو حي / موك عادي</option>
+          <option value="low">mock: فاتورة عادية</option>
+          <option value="medium">mock: أجل قريب</option>
+          <option value="high">mock: محكمة</option>
+          <option value="scam">mock: نصب</option>
+          <option value="unreadable">mock: صورة مغبشة</option>
+          <option value="not_a_document">mock: ماشي وثيقة</option>
+        </select>
+        <button class="primary" id="go">قرا الورقة</button>
+      </div>
+      <p id="hint">إلى ما كاينش مفاتيح Gemini/Groq، السيرفر كيخدم بالموك.</p>
+      <pre id="out">{}</pre>
+    </div>
+    <p><a href="/swagger-ui.html">Swagger</a> · <code>POST /api/read</code> · <code>POST /api/ask</code></p>
+  </main>
+  <script>
+    const toB64 = (file) => new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const s = String(reader.result);
+        resolve(s.split(",")[1] || "");
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+    document.getElementById("go").onclick = async () => {
+      const out = document.getElementById("out");
+      out.textContent = "كانقراو...";
+      const file = document.getElementById("file").files[0];
+      const scenario = document.getElementById("scenario").value;
+      let imageBase64 = "ZmFrZS1qcGVnLWJ5dGVzLWZvci1tb2Nr";
+      let mimeType = "image/jpeg";
+      if (file) {
+        imageBase64 = await toB64(file);
+        mimeType = file.type || "image/jpeg";
+      }
+      const headers = { "Content-Type": "application/json" };
+      if (scenario) headers["X-Mock-Scenario"] = scenario;
+      const res = await fetch("/api/read", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ imageBase64, mimeType })
+      });
+      const json = await res.json();
+      out.textContent = JSON.stringify(json, null, 2);
+    };
+  </script>
+</body>
+</html>
