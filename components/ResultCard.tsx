@@ -1,4 +1,7 @@
-import type { ReadResult } from "@/lib/types";
+"use client";
+
+import type { Lang, ReadResult } from "@/lib/types";
+import { useLang, type StringKey } from "@/lib/i18n";
 import { formatAmount, formatDeadline } from "@/lib/share";
 import SafetyNote from "./SafetyNote";
 import ListenButton from "./ListenButton";
@@ -11,41 +14,51 @@ type ResultCardProps = {
   previewUrl?: string | null;
 };
 
-const RISK: Record<ReadResult["risk_level"], { icon: string; label: string; fr: string; className: string }> = {
-  low: { icon: "🟢", label: "عادي", fr: "Normal", className: "risk-low" },
-  medium: { icon: "🟠", label: "رد البال", fr: "Attention", className: "risk-medium" },
-  high: { icon: "🔴", label: "خطر", fr: "Urgent", className: "risk-high" },
+type T = (key: StringKey, vars?: Record<string, string | number>) => string;
+
+const RISK: Record<ReadResult["risk_level"], { icon: string; label: StringKey; fr: string; className: string }> = {
+  low: { icon: "🟢", label: "riskLow", fr: "Normal", className: "risk-low" },
+  medium: { icon: "🟠", label: "riskMedium", fr: "Attention", className: "risk-medium" },
+  high: { icon: "🔴", label: "riskHigh", fr: "Urgent", className: "risk-high" },
 };
 
-function daysLeftPill(daysLeft: number | null) {
+function daysLeftPill(daysLeft: number | null, t: T) {
   if (daysLeft === null) return null;
-  if (daysLeft < 0) return { text: "الأجل فات", className: "pill pill-urgent", icon: "⛔" };
-  if (daysLeft === 0) return { text: "اليوم هو آخر أجل", className: "pill pill-urgent", icon: "⏰" };
-  if (daysLeft <= 3) return { text: `بقاو غير ${daysLeft} أيام`, className: "pill pill-urgent", icon: "⏰" };
-  if (daysLeft <= 7) return { text: `بقاو ${daysLeft} أيام`, className: "pill pill-soon", icon: "⏳" };
-  return { text: `بقاو ${daysLeft} يوم`, className: "pill", icon: "📅" };
+  if (daysLeft < 0) return { text: t("deadlinePassed"), className: "pill pill-urgent", icon: "⛔" };
+  if (daysLeft === 0) return { text: t("deadlineToday"), className: "pill pill-urgent", icon: "⏰" };
+  if (daysLeft <= 3) return { text: t("daysLeftFew", { n: daysLeft }), className: "pill pill-urgent", icon: "⏰" };
+  if (daysLeft <= 7) return { text: t("daysLeft", { n: daysLeft }), className: "pill pill-soon", icon: "⏳" };
+  return { text: t("daysLeft", { n: daysLeft }), className: "pill", icon: "📅" };
 }
 
 /** Everything on the card as one spoken text, read by the top 🔊 button. */
-function spokenResult(result: ReadResult, pill: ReturnType<typeof daysLeftPill>): string {
+function spokenResult(result: ReadResult, pill: ReturnType<typeof daysLeftPill>, lang: Lang, t: T): string {
+  const en = lang === "en";
   const parts: string[] = [];
-  if (result.scam_suspected) parts.push("رد البال! هاد الورقة فيها علامات ديال النصب.");
-  else parts.push(`مستوى الخطر: ${RISK[result.risk_level].label}.`);
-  if (result.doc_type) parts.push(`هادي ${result.doc_type}${result.sender ? ` من ${result.sender}` : ""}.`);
-  if (result.amount) parts.push(`المبلغ: ${formatAmount(result.amount)}.`);
-  if (result.deadline) parts.push(`الأجل: قبل ${formatDeadline(result.deadline)}${pill ? `، ${pill.text}` : ""}.`);
-  if (result.action) parts.push(`شنو خاصك دير: ${result.action}.`);
+  if (result.scam_suspected) parts.push(en ? "Careful! This paper shows signs of a scam." : "رد البال! هاد الورقة فيها علامات ديال النصب.");
+  else parts.push(`${en ? "Risk level" : "مستوى الخطر"}: ${t(RISK[result.risk_level].label)}.`);
+  if (result.doc_type) {
+    const from = result.sender ? `${en ? " from" : " من"} ${result.sender}` : "";
+    parts.push(`${en ? "This is" : "هادي"} ${result.doc_type}${from}.`);
+  }
+  if (result.amount) parts.push(`${en ? "Amount" : "المبلغ"}: ${formatAmount(result.amount, lang)}.`);
+  if (result.deadline) {
+    const left = pill ? `${en ? ", " : "، "}${pill.text}` : "";
+    parts.push(`${en ? "Deadline: before" : "الأجل: قبل"} ${formatDeadline(result.deadline, lang)}${left}.`);
+  }
+  if (result.action) parts.push(`${t("whatToDo")}: ${result.action}.`);
   parts.push(result.darija_summary);
-  parts.push("وإلا كانت الورقة مهمة، تأكد مع شي حد تيق فيه.");
+  parts.push(t("safety"));
   const full = parts.join(" ");
   // /api/tts accepts up to 800 characters (~2 min of speech, under Vercel's 4.5 MB response cap).
   if (full.length <= 800) return full;
-  return result.darija_summary.length <= 800 ? result.darija_summary : result.darija_summary.slice(0, 800);
+  return result.darija_summary.slice(0, 800);
 }
 
 export default function ResultCard({ result, onRetake, previewUrl }: ResultCardProps) {
+  const { lang, t } = useLang();
   const risk = RISK[result.risk_level];
-  const pill = daysLeftPill(result.days_left);
+  const pill = daysLeftPill(result.days_left, t);
   const lowConfidence = result.confidence < 0.6;
   // Reasons are shown in the scam alert; otherwise under the risk badge.
   const reasons = result.scam_suspected ? [] : result.risk_reasons;
@@ -53,13 +66,13 @@ export default function ResultCard({ result, onRetake, previewUrl }: ResultCardP
   return (
     <div className="result">
       {/* Read the whole card aloud: first thing on the screen */}
-      <ListenButton text={spokenResult(result, pill)} label="سمع كلشي بالصوت" sub="Tout écouter" />
+      <ListenButton text={spokenResult(result, pill, lang, t)} label={t("listenAll")} sub="Tout écouter" />
 
       {lowConfidence && <SafetyNote urgent />}
 
       {result.scam_suspected && (
         <div className="scam-alert" role="alert">
-          <h2>⚠️ رد البال! هادي فيها علامات ديال النصب</h2>
+          <h2>{t("scamTitle")}</h2>
           <p className="fr" lang="fr" style={{ color: "inherit" }}>
             Attention : signes d&apos;arnaque
           </p>
@@ -80,8 +93,8 @@ export default function ResultCard({ result, onRetake, previewUrl }: ResultCardP
         </span>
         <div>
           <span className="risk-level">
-            <span aria-hidden="true">{risk.icon}</span> {risk.label}
-            <span lang="fr" style={{ fontWeight: 500, opacity: 0.8 }}>
+            <span aria-hidden="true">{risk.icon}</span> {t(risk.label)}
+            <span className="fr-inline" lang="fr" style={{ fontWeight: 500, opacity: 0.8 }}>
               · {risk.fr}
             </span>
           </span>
@@ -100,8 +113,12 @@ export default function ResultCard({ result, onRetake, previewUrl }: ResultCardP
       {/* 3. Amount + deadline — biggest text on the screen */}
       {(result.amount || result.deadline) && (
         <div className="card money">
-          {result.amount && <p className="money-amount">{formatAmount(result.amount)}</p>}
-          {result.deadline && <p className="money-deadline">قبل {formatDeadline(result.deadline)}</p>}
+          {result.amount && <p className="money-amount">{formatAmount(result.amount, lang)}</p>}
+          {result.deadline && (
+            <p className="money-deadline">
+              {t("before")} {formatDeadline(result.deadline, lang)}
+            </p>
+          )}
           {pill && (
             <span className={pill.className}>
               <span aria-hidden="true">{pill.icon}</span> {pill.text}
@@ -117,17 +134,17 @@ export default function ResultCard({ result, onRetake, previewUrl }: ResultCardP
             ✅
           </span>
           <div>
-            <p className="card-label">شنو خاصك دير</p>
+            <p className="card-label">{t("whatToDo")}</p>
             <p>{result.action}</p>
           </div>
         </div>
       )}
 
-      {/* 5. Darija explanation */}
+      {/* 5. Explanation */}
       {result.darija_summary && (
         <div className="card summary">
           <p className="card-label">
-            <span aria-hidden="true">🗣️</span> الشرح بالدارجة
+            <span aria-hidden="true">🗣️</span> {t("explanation")}
           </p>
           <p>{result.darija_summary}</p>
         </div>
@@ -144,14 +161,14 @@ export default function ResultCard({ result, onRetake, previewUrl }: ResultCardP
 
       {/* 8. Secondary action */}
       <button type="button" className="btn btn-ghost btn-block" onClick={onRetake}>
-        <span aria-hidden="true">📸</span> صوّر ورقة أخرى
+        <span aria-hidden="true">📸</span> {t("retake")}
       </button>
 
       {previewUrl && (
         <div className="photo-thumb">
           {/* eslint-disable-next-line @next/next/no-img-element -- local object URL */}
           <img src={previewUrl} alt="" aria-hidden="true" />
-          <span>التصويرة ديالك ما تحفظاتش، غير كتبان هنا دابا.</span>
+          <span>{t("photoNote")}</span>
         </div>
       )}
     </div>

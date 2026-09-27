@@ -1,6 +1,7 @@
 // POST /api/tts — Darija explanation → one fixed, natural voice (Gemini TTS "Sulafat") as WAV.
 // Same voice on every phone (the browser voice differs per device and reads with a Standard Arabic accent).
 // The client falls back to the browser voice if this fails.
+import { parseLang } from "@/lib/lang";
 import { VOICES } from "@/lib/voices";
 
 export const runtime = "nodejs";
@@ -19,9 +20,12 @@ const DEFAULT_MODELS = "gemini-3.8-flash-tts";
 const DEFAULT_VOICE: string = VOICES[0];
 
 // Style direction for the TTS model (not read aloud).
-const STYLE =
-  "Read the following Moroccan Darija text aloud with a natural Moroccan accent (like a person from Casablanca), " +
-  "warm, calm and clear, a little slowly, like explaining a paper to an elderly parent. Read only the text:";
+const STYLE = {
+  ar:
+    "Read the following Moroccan Darija text aloud with a natural Moroccan accent (like a person from Casablanca), " +
+    "warm, calm and clear, a little slowly, like explaining a paper to an elderly parent. Read only the text:",
+  en: "Read the following English text aloud in a warm, calm and clear voice, a little slowly, like explaining a paper to an elderly parent. Read only the text:",
+};
 
 // Same text + voice → same audio: keep recent results in memory (per server instance)
 // so repeated texts (the home page narration) don't spend the TTS quota again.
@@ -110,7 +114,7 @@ export async function POST(request: Request) {
   const ip = request.headers.get("x-forwarded-for")?.split(",")[0].trim() || "unknown";
   if (rateLimited(ip)) return fail(429, "rate_limited");
 
-  let body: { text?: unknown; voice?: unknown };
+  let body: { text?: unknown; voice?: unknown; lang?: unknown };
   try {
     body = await request.json();
   } catch {
@@ -118,10 +122,11 @@ export async function POST(request: Request) {
   }
   const text = typeof body.text === "string" ? body.text.trim() : "";
   if (!text || text.length > MAX_CHARS) return fail(400, "invalid_input");
+  const lang = parseLang(body.lang);
   const envVoice = process.env.GEMINI_TTS_VOICE?.trim() || DEFAULT_VOICE;
   const voice = typeof body.voice === "string" && (VOICES as readonly string[]).includes(body.voice) ? body.voice : envVoice;
 
-  const cacheKey = `${voice}|${text}`;
+  const cacheKey = `${lang}|${voice}|${text}`;
   const cached = audioCache.get(cacheKey);
   if (cached) {
     console.info(JSON.stringify({ route: "tts", voice, chars: text.length, cache: "hit" }));
@@ -145,7 +150,7 @@ export async function POST(request: Request) {
             headers: { "Content-Type": "application/json", "x-goog-api-key": key },
             signal: AbortSignal.timeout(timeLeft()),
             body: JSON.stringify({
-              contents: [{ role: "user", parts: [{ text: `${STYLE}\n\n${text}` }] }],
+              contents: [{ role: "user", parts: [{ text: `${STYLE[lang]}\n\n${text}` }] }],
               generationConfig: {
                 responseModalities: ["AUDIO"],
                 speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: voice } } },

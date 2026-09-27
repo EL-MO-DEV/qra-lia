@@ -18,14 +18,14 @@ function getPlayer(): HTMLAudioElement {
 }
 
 /** Start (or reuse) the download of the spoken version of `text`. */
-export function prefetchVoice(text: string, voice?: string): Promise<string> {
-  const key = `${voice ?? ""}|${text}`;
+export function prefetchVoice(text: string, voice?: string, lang: "ar" | "en" = "ar"): Promise<string> {
+  const key = `${lang}|${voice ?? ""}|${text}`;
   let pending = cache.get(key);
   if (!pending) {
     pending = fetch("/api/tts", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text, voice }),
+      body: JSON.stringify({ text, voice, lang }),
     }).then(async (res) => {
       if (!res.ok) throw new Error(`tts ${res.status}`);
       return URL.createObjectURL(await res.blob());
@@ -43,7 +43,9 @@ let current: { stop: () => void } | null = null;
  * Play the server voice. Call from a tap handler. Resolves when playback ends or is stopped;
  * rejects if the audio could not be fetched/played (caller falls back to the browser voice).
  */
-export async function playVoice(text: string, voice?: string, onStart?: () => void): Promise<void> {
+export async function playVoice(
+  text: string, voice?: string, onStart?: () => void, lang: "ar" | "en" = "ar",
+): Promise<void> {
   stopVoice();
   const audio = getPlayer();
   // Unlock inside the gesture (iOS), then swap in the real audio.
@@ -59,7 +61,7 @@ export async function playVoice(text: string, voice?: string, onStart?: () => vo
         resolve();
       },
     };
-    prefetchVoice(text, voice)
+    prefetchVoice(text, voice, lang)
       .then((url) => {
         if (stopped) return;
         audio.src = url;

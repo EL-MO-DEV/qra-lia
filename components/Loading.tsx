@@ -1,15 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useLang, type StringKey } from "@/lib/i18n";
 
 type LoadingProps = {
   previewUrl?: string | null;
 };
 
-const STEPS = [
-  { at: 0, label: "كنصيفطو التصويرة", icon: "📤" },
-  { at: 2500, label: "كنقراو الورقة", icon: "🔎" },
-  { at: 6000, label: "كنوجدو الشرح بالدارجة", icon: "🗣️" },
+const STEPS: { at: number; label: StringKey; icon: string }[] = [
+  { at: 0, label: "stepSend", icon: "📤" },
+  { at: 2500, label: "stepRead", icon: "🔎" },
+  { at: 6000, label: "stepExplain", icon: "🗣️" },
 ];
 
 /**
@@ -18,6 +19,7 @@ const STEPS = [
  */
 export default function Loading({ previewUrl }: LoadingProps) {
   const [elapsed, setElapsed] = useState(0);
+  const { t } = useLang();
 
   useEffect(() => {
     const started = Date.now();
@@ -41,7 +43,7 @@ export default function Loading({ previewUrl }: LoadingProps) {
       </div>
 
       <p className="loading-title">
-        كنقرا الورقة…
+        {t("reading")}
         <span className="fr" lang="fr">
           Lecture en cours…
         </span>
@@ -51,14 +53,14 @@ export default function Loading({ previewUrl }: LoadingProps) {
         {STEPS.map((s, i) => (
           <li key={s.label} className={i < active ? "is-done" : i === active ? "is-active" : undefined}>
             <span aria-hidden="true">{i < active ? "✅" : s.icon}</span>
-            {s.label}
+            {t(s.label)}
           </li>
         ))}
       </ol>
 
       {elapsed >= 8000 && (
         <p className="loading-patience">
-          شوية صبر، قريب نساليو
+          {t("patience")}
           <span className="fr" lang="fr">
             Encore quelques secondes
           </span>

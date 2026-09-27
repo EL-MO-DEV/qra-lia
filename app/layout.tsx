@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { IBM_Plex_Sans_Arabic } from "next/font/google";
+import { LangProvider } from "@/lib/i18n";
 import "./globals.css";
 
 // One family for both scripts: Darija (Arabic script) + French subtitles (Latin).
@@ -65,7 +66,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${qraFont.variable} h-full antialiased`}
     >
       <body className={`${qraFont.className} min-h-full flex flex-col`}>
-        {children}
+        <LangProvider>{children}</LangProvider>
       </body>
     </html>
   );

@@ -8,6 +8,7 @@ import ResultCard from "@/components/ResultCard";
 import ErrorState, { ErrorStateKind } from "@/components/ErrorState";
 import { compressImage } from "@/lib/compress";
 import { readDocument, type ClientError } from "@/lib/api";
+import { useLang } from "@/lib/i18n";
 import { MOCK_OK, MOCK_SCAM, MOCK_UNREADABLE } from "@/lib/mock";
 import type { ReadResult } from "@/lib/types";
 
@@ -71,6 +72,7 @@ const noMockOnServer = () => null;
 
 export default function Page() {
   const [state, dispatch] = useReducer(reducer, { screen: "idle" });
+  const { lang, setLang, t } = useLang();
   const previewUrlRef = useRef<string | null>(null);
   const mockParam = useSyncExternalStore(noSubscribe, readMockParam, noMockOnServer);
   const isDemo = mockForParam(mockParam) !== null;
@@ -102,7 +104,7 @@ export default function Page() {
         // Demo-only mock switch: ?mock=ok|unreadable|scam (a DEMO banner is shown)
         const mock = mockForParam(mockParam);
 
-        const result = mock ?? (await readDocument({ imageBase64: base64, mimeType }));
+        const result = mock ?? (await readDocument({ imageBase64: base64, mimeType, lang }));
 
         if (result.status === "unreadable") {
           dispatch({ type: "RESULT_UNREADABLE" });
@@ -115,7 +117,7 @@ export default function Page() {
         dispatch({ type: "API_ERROR", error: err as ClientError });
       }
     },
-    [mockParam]
+    [mockParam, lang]
   );
 
   const handleRetake = useCallback(() => {
@@ -128,7 +130,7 @@ export default function Page() {
     <>
       {isDemo && (
         <div className="demo-banner" role="note">
-          🧪 DEMO — نتيجة تجريبية، ماشي قراية حقيقية
+          {t("demo")}
         </div>
       )}
 
@@ -139,20 +141,30 @@ export default function Page() {
             className="brand"
             onClick={handleRetake}
             disabled={busy}
-            aria-label="Qra Lia — الرئيسية"
+            aria-label={t("homeLabel")}
           >
             <BrandMark />
             <span className="brand-name">
-              <strong>اقرا ليا</strong>
-              <span>Qra Lia</span>
+              <strong>{t("brandName")}</strong>
+              <span>{t("brandSub")}</span>
             </span>
           </button>
-          {state.screen !== "idle" && !busy && (
-            <button type="button" className="topbar-chip" onClick={handleRetake}>
-              <span aria-hidden="true">📸</span> ورقة جديدة
+          <div className="topbar-actions">
+            {state.screen !== "idle" && !busy && (
+              <button type="button" className="topbar-chip" onClick={handleRetake} aria-label={t("newPaper")}>
+                <span aria-hidden="true">📸</span> <span className="chip-label">{t("newPaper")}</span>
+              </button>
+            )}
+            <button
+              type="button"
+              className="lang-switch"
+              onClick={() => setLang(lang === "ar" ? "en" : "ar")}
+              disabled={busy}
+              aria-label={t("switchLabel")}
+            >
+              <span aria-hidden="true">🌐</span> {t("switchTo")}
             </button>
-          )}
-          {state.screen === "idle" && <span className="topbar-chip">🔒 بلا تسجيل</span>}
+          </div>
         </div>
       </header>
 

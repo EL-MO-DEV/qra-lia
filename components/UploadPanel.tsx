@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef } from "react";
+import { useLang } from "@/lib/i18n";
 
 type UploadPanelProps = {
   onFileChosen: (file: File) => void;
@@ -13,6 +14,7 @@ type UploadPanelProps = {
 export default function UploadPanel({ onFileChosen }: UploadPanelProps) {
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
+  const { t } = useLang();
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -28,19 +30,19 @@ export default function UploadPanel({ onFileChosen }: UploadPanelProps) {
           📸
         </span>
         <span>
-          <span className="btn-camera-main">صوّر الورقة</span>
+          <span className="btn-camera-main">{t("takePhoto")}</span>
           <span className="btn-camera-sub" lang="fr">
             Prendre une photo
           </span>
         </span>
         <span className="btn-camera-arrow" aria-hidden="true">
-          ←
+          <span className="flip-ltr">←</span>
         </span>
       </button>
 
       <button type="button" className="link-gallery" onClick={() => galleryInputRef.current?.click()}>
         <span aria-hidden="true">🖼️</span>
-        <span>ولا اختار من الصور</span>
+        <span>{t("fromGallery")}</span>
         <span className="fr" lang="fr">
           ou depuis la galerie
         </span>
@@ -48,7 +50,7 @@ export default function UploadPanel({ onFileChosen }: UploadPanelProps) {
 
       <p className="reassurance">
         <span aria-hidden="true">🔒</span>
-        <span>الصورة ما كتحفظش عندنا</span>
+        <span>{t("notStored")}</span>
         <span className="fr" lang="fr">
           Votre photo n&apos;est pas enregistrée
         </span>
