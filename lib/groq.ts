@@ -1,17 +1,22 @@
 // Fallback provider: Groq (OpenAI-compatible chat completions with a vision model).
 // Ported from @SanaaOua's backend (ma.qralia.ai.GroqVisionClient).
 import { RETRY_INSTRUCTION, SYSTEM_PROMPT, USER_INSTRUCTION } from "./prompt";
-import { MODEL_JSON_SCHEMA, ProviderError, parseModelOutput, type ModelExtraction } from "./schema";
+import { MODEL_JSON_SCHEMA, ProviderError, parseModelOutput, providerErrorDetail, type ModelExtraction } from "./schema";
 
 const TIMEOUT_MS = 15_000;
 const DEFAULT_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct";
 
+// Trimmed: a pasted key or model name with a trailing space/newline breaks the request.
+function apiKey(): string {
+  return process.env.GROQ_API_KEY?.trim() ?? "";
+}
+
 export function groqEnabled(): boolean {
-  return Boolean(process.env.GROQ_API_KEY);
+  return Boolean(apiKey());
 }
 
 export function groqModel(): string {
-  return process.env.GROQ_MODEL || DEFAULT_MODEL;
+  return process.env.GROQ_MODEL?.trim() || DEFAULT_MODEL;
 }
 
 type GroqResponse = { choices?: { message?: { content?: string } }[] };
@@ -25,7 +30,7 @@ export async function extractWithGroq(imageBase64: string, mimeType: string, ret
   try {
     res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${process.env.GROQ_API_KEY}` },
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey()}` },
       signal: AbortSignal.timeout(TIMEOUT_MS),
       body: JSON.stringify({
         model: groqModel(),
@@ -44,9 +49,9 @@ export async function extractWithGroq(imageBase64: string, mimeType: string, ret
       }),
     });
   } catch (e) {
-    throw new ProviderError(`groq ${e instanceof Error ? e.name : "error"}`);
+    throw new ProviderError(`groq ${e instanceof Error ? `${e.name}: ${e.message}` : "error"}`);
   }
-  if (!res.ok) throw new ProviderError(`groq http ${res.status}`);
+  if (!res.ok) throw new ProviderError(`groq http ${res.status}: ${await providerErrorDetail(res)} (model ${groqModel()})`);
 
   const data = (await res.json().catch(() => ({}))) as GroqResponse;
   return parseModelOutput(data.choices?.[0]?.message?.content);

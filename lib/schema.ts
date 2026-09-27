@@ -85,3 +85,19 @@ export class InvalidModelOutput extends Error {}
 
 /** The provider call itself failed (timeout, HTTP error, missing key). */
 export class ProviderError extends Error {}
+
+/**
+ * Short, loggable reason from a provider error body, e.g. "API key not valid" or "model not found".
+ * Provider error messages describe the request/config, never the document content.
+ */
+export async function providerErrorDetail(res: Response): Promise<string> {
+  const raw = await res.text().catch(() => "");
+  let message = raw;
+  try {
+    const body = JSON.parse(raw) as { error?: { message?: string; status?: string } | string };
+    message = typeof body.error === "string" ? body.error : [body.error?.status, body.error?.message].filter(Boolean).join(" ");
+  } catch {
+    // not JSON: keep the raw text
+  }
+  return message.replace(/\s+/g, " ").trim().slice(0, 200) || "no details";
+}
