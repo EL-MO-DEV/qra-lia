@@ -7,7 +7,7 @@ type UploadPanelProps = {
 };
 
 /**
- * Home screen: one giant camera button + a smaller gallery link.
+ * The main action: one giant camera button + a gallery option.
  * Two hidden <input type="file"> elements do the actual picking.
  */
 export default function UploadPanel({ onFileChosen }: UploadPanelProps) {
@@ -23,60 +23,39 @@ export default function UploadPanel({ onFileChosen }: UploadPanelProps) {
 
   return (
     <div className="upload-panel">
-      <button
-        type="button"
-        className="btn btn-primary btn-camera"
-        onClick={() => cameraInputRef.current?.click()}
-        aria-label="صوّر الورقة"
-      >
+      <button type="button" className="btn-camera" onClick={() => cameraInputRef.current?.click()}>
         <span className="btn-camera-icon" aria-hidden="true">
           📸
         </span>
-        <span className="btn-camera-labels">
-          <span className="btn-camera-main" dir="rtl">
-            صوّر الورقة
-          </span>
-          <span className="btn-camera-sub" dir="ltr">
+        <span>
+          <span className="btn-camera-main">صوّر الورقة</span>
+          <span className="btn-camera-sub" lang="fr">
             Prendre une photo
           </span>
         </span>
-      </button>
-
-      <button
-        type="button"
-        className="link-gallery"
-        onClick={() => galleryInputRef.current?.click()}
-      >
-        <span aria-hidden="true">🖼️</span>{" "}
-        <span dir="rtl">ولا اختار من الصور</span>
-        <span className="link-gallery-sub" dir="ltr">
-          {" "}
-          ou choisir dans la galerie
+        <span className="btn-camera-arrow" aria-hidden="true">
+          ←
         </span>
       </button>
 
-      <p className="reassurance" dir="rtl">
-        الصورة ما كتحفظش عندنا
-        <span className="reassurance-sub" dir="ltr">
+      <button type="button" className="link-gallery" onClick={() => galleryInputRef.current?.click()}>
+        <span aria-hidden="true">🖼️</span>
+        <span>ولا اختار من الصور</span>
+        <span className="fr" lang="fr">
+          ou depuis la galerie
+        </span>
+      </button>
+
+      <p className="reassurance">
+        <span aria-hidden="true">🔒</span>
+        <span>الصورة ما كتحفظش عندنا</span>
+        <span className="fr" lang="fr">
           Votre photo n&apos;est pas enregistrée
         </span>
       </p>
 
-      <input
-        ref={cameraInputRef}
-        type="file"
-        accept="image/*"
-        capture="environment"
-        onChange={handleChange}
-        hidden
-      />
-      <input
-        ref={galleryInputRef}
-        type="file"
-        accept="image/*"
-        onChange={handleChange}
-        hidden
-      />
+      <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" onChange={handleChange} hidden />
+      <input ref={galleryInputRef} type="file" accept="image/*" onChange={handleChange} hidden />
     </div>
   );
 }

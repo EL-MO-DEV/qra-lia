@@ -34,36 +34,43 @@ function messageFor(error: ErrorStateKind): string {
   }
 }
 
-/** True when the case benefits from the "unreadable photo" tip block. */
+/** True when the case benefits from the "how to take a good photo" tip block. */
 function showTips(error: ErrorStateKind): boolean {
-  if (error.kind === "unreadable") return true;
+  if (error.kind === "unreadable" || error.kind === "not_a_document") return true;
   if (error.kind === "api" && error.error.error === "invalid_input") return true;
   return false;
 }
 
+function iconFor(error: ErrorStateKind): string {
+  if (error.kind === "unreadable") return "🌫️";
+  if (error.kind === "not_a_document") return "📄";
+  if (error.kind === "api" && error.error.error === "network") return "📶";
+  if (error.kind === "api" && error.error.error === "rate_limited") return "⏳";
+  return "🧐";
+}
+
 export default function ErrorState({ error, onRetry }: ErrorStateProps) {
   return (
-    <div className="screen error-screen">
-      <div className="error-card">
-        <p className="error-icon" aria-hidden="true">
-          🧐
-        </p>
-        <p className="error-message" dir="rtl">
-          {messageFor(error)}
-        </p>
+    <div className="card error-card" role="alert">
+      <p className="error-icon" aria-hidden="true">
+        {iconFor(error)}
+      </p>
+      <p className="error-message">{messageFor(error)}</p>
 
-        {showTips(error) && (
-          <ul className="error-tips" dir="rtl">
-            <li>💡 فضو مزيان</li>
-            <li>💡 الورقة كاملة فالتصويرة</li>
-            <li>💡 ما تحركش التيليفون</li>
-          </ul>
-        )}
+      {showTips(error) && (
+        <ul className="error-tips">
+          <li>💡 فضو مزيان، بلا ظل على الورقة</li>
+          <li>💡 الورقة كاملة فالتصويرة، من الفوق</li>
+          <li>💡 ما تحركش التيليفون حتى تصوّر</li>
+        </ul>
+      )}
 
-        <button type="button" className="btn btn-primary" onClick={onRetry}>
-          <span aria-hidden="true">📸</span> <span dir="rtl">صوّر ورقة أخرى</span>
-        </button>
-      </div>
+      <button type="button" className="btn btn-primary btn-block" onClick={onRetry}>
+        <span aria-hidden="true">📸</span> عاود صوّر
+        <span className="fr" lang="fr" style={{ display: "inline", color: "inherit", opacity: 0.85 }}>
+          Réessayer
+        </span>
+      </button>
     </div>
   );
 }

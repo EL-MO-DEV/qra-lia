@@ -1,4 +1,5 @@
 import type { ReadResult } from "@/lib/types";
+import { formatAmount, formatDeadline } from "@/lib/share";
 import SafetyNote from "./SafetyNote";
 import ListenButton from "./ListenButton";
 import ReminderButton from "./ReminderButton";
@@ -7,107 +8,133 @@ import ShareButton from "./ShareButton";
 type ResultCardProps = {
   result: ReadResult;
   onRetake: () => void;
+  previewUrl?: string | null;
 };
 
-const RISK_BADGE: Record<
-  ReadResult["risk_level"],
-  { icon: string; label: string; className: string }
-> = {
-  low: { icon: "🟢", label: "عادي", className: "badge-low" },
-  medium: { icon: "🟠", label: "رد البال", className: "badge-medium" },
-  high: { icon: "🔴", label: "خطر", className: "badge-high" },
+const RISK: Record<ReadResult["risk_level"], { icon: string; label: string; fr: string; className: string }> = {
+  low: { icon: "🟢", label: "عادي", fr: "Normal", className: "risk-low" },
+  medium: { icon: "🟠", label: "رد البال", fr: "Attention", className: "risk-medium" },
+  high: { icon: "🔴", label: "خطر", fr: "Urgent", className: "risk-high" },
 };
 
-function formatAmount(amount: ReadResult["amount"]) {
-  if (!amount) return null;
-  const currency = amount.currency === "MAD" ? "درهم" : amount.currency;
-  return `${amount.value} ${currency}`;
-}
-
-function formatDaysLeft(daysLeft: number | null) {
+function daysLeftPill(daysLeft: number | null) {
   if (daysLeft === null) return null;
-  if (daysLeft < 0) return "الأجل فات";
-  return `بقاو ${daysLeft} يوم`;
+  if (daysLeft < 0) return { text: "الأجل فات", className: "pill pill-urgent", icon: "⛔" };
+  if (daysLeft === 0) return { text: "اليوم هو آخر أجل", className: "pill pill-urgent", icon: "⏰" };
+  if (daysLeft <= 3) return { text: `بقاو غير ${daysLeft} أيام`, className: "pill pill-urgent", icon: "⏰" };
+  if (daysLeft <= 7) return { text: `بقاو ${daysLeft} أيام`, className: "pill pill-soon", icon: "⏳" };
+  return { text: `بقاو ${daysLeft} يوم`, className: "pill", icon: "📅" };
 }
 
-export default function ResultCard({ result, onRetake }: ResultCardProps) {
-  const badge = RISK_BADGE[result.risk_level];
-  const amountText = formatAmount(result.amount);
-  const daysLeftText = formatDaysLeft(result.days_left);
+export default function ResultCard({ result, onRetake, previewUrl }: ResultCardProps) {
+  const risk = RISK[result.risk_level];
+  const pill = daysLeftPill(result.days_left);
   const lowConfidence = result.confidence < 0.6;
+  // Reasons are shown in the scam alert; otherwise under the risk badge.
+  const reasons = result.scam_suspected ? [] : result.risk_reasons;
 
   return (
-    <div className="screen result-screen">
-      {/* Low-confidence banner replaces the bottom SafetyNote position with a top one */}
+    <div className="result">
       {lowConfidence && <SafetyNote urgent />}
 
-      <div className="result-card">
-        {/* 1. Risk badge (+ scam banner) */}
-        <div className={`risk-badge ${badge.className}`}>
-          <span aria-hidden="true">{badge.icon}</span>
-          <span dir="rtl">{badge.label}</span>
+      {result.scam_suspected && (
+        <div className="scam-alert" role="alert">
+          <h2>⚠️ رد البال! هادي فيها علامات ديال النصب</h2>
+          <p className="fr" lang="fr" style={{ color: "inherit" }}>
+            Attention : signes d&apos;arnaque
+          </p>
+          {result.risk_reasons.length > 0 && (
+            <ul>
+              {result.risk_reasons.map((reason, i) => (
+                <li key={i}>{reason}</li>
+              ))}
+            </ul>
+          )}
         </div>
+      )}
 
-        {result.scam_suspected && (
-          <div className="scam-banner" role="alert">
-            <p dir="rtl">⚠️ هادي فيها علامات ديال النصب</p>
-            {result.risk_reasons.length > 0 && (
-              <ul dir="rtl">
-                {result.risk_reasons.map((reason, i) => (
-                  <li key={i}>{reason}</li>
-                ))}
-              </ul>
-            )}
-          </div>
-        )}
+      {/* 1–2. Risk + what it is */}
+      <div className={`risk-hero ${risk.className}`}>
+        <span className="risk-icon" aria-hidden="true">
+          {result.scam_suspected ? "🚨" : "📄"}
+        </span>
+        <div>
+          <span className="risk-level">
+            <span aria-hidden="true">{risk.icon}</span> {risk.label}
+            <span lang="fr" style={{ fontWeight: 500, opacity: 0.8 }}>
+              · {risk.fr}
+            </span>
+          </span>
+          {result.doc_type && <p className="risk-doc">{result.doc_type}</p>}
+          {result.sender && <p className="risk-sender">{result.sender}</p>}
+          {reasons.length > 0 && (
+            <ul className="reasons">
+              {reasons.map((r, i) => (
+                <li key={i}>{r}</li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
 
-        {/* 2. What it is */}
-        {(result.doc_type || result.sender) && (
-          <div className="row row-doc-info" dir="rtl">
-            {result.doc_type && <p className="doc-type">{result.doc_type}</p>}
-            {result.sender && <p className="sender">{result.sender}</p>}
-          </div>
-        )}
+      {/* 3. Amount + deadline — biggest text on the screen */}
+      {(result.amount || result.deadline) && (
+        <div className="card money">
+          {result.amount && <p className="money-amount">{formatAmount(result.amount)}</p>}
+          {result.deadline && <p className="money-deadline">قبل {formatDeadline(result.deadline)}</p>}
+          {pill && (
+            <span className={pill.className}>
+              <span aria-hidden="true">{pill.icon}</span> {pill.text}
+            </span>
+          )}
+        </div>
+      )}
 
-        {/* 3. Amount + deadline — biggest text on the screen */}
-        {(amountText || result.deadline || daysLeftText) && (
-          <div className="row row-amount-deadline" dir="rtl">
-            {amountText && <p className="amount">{amountText}</p>}
-            {result.deadline && <p className="deadline">قبل {result.deadline}</p>}
-            {daysLeftText && <p className="days-left">{daysLeftText}</p>}
-          </div>
-        )}
-
-        {/* 4. What to do */}
-        {result.action && (
-          <div className="row row-action" dir="rtl">
-            <span aria-hidden="true">✅</span>
+      {/* 4. What to do */}
+      {result.action && (
+        <div className="card todo">
+          <span className="todo-icon" aria-hidden="true">
+            ✅
+          </span>
+          <div>
+            <p className="card-label">شنو خاصك دير</p>
             <p>{result.action}</p>
           </div>
-        )}
-
-        {/* 5. Darija explanation */}
-        {result.darija_summary && (
-          <div className="row row-summary" dir="rtl">
-            <p>{result.darija_summary}</p>
-          </div>
-        )}
-
-        {/* 6. Action row — placeholders until Moncef's components arrive */}
-        <div className="row row-feature-buttons">
-          <ListenButton text={result.darija_summary} />
-          <ShareButton result={result} />
-          <ReminderButton result={result} />
         </div>
+      )}
 
-        {/* 7. SafetyNote — quiet row at the bottom unless confidence is low (shown above instead) */}
-        {!lowConfidence && <SafetyNote />}
+      {/* 5. Darija explanation */}
+      {result.darija_summary && (
+        <div className="card summary">
+          <p className="card-label">
+            <span aria-hidden="true">🗣️</span> الشرح بالدارجة
+          </p>
+          <p>{result.darija_summary}</p>
+        </div>
+      )}
 
-        {/* 8. Secondary action */}
-        <button type="button" className="btn btn-secondary" onClick={onRetake}>
-          <span aria-hidden="true">📸</span> <span dir="rtl">صوّر ورقة أخرى</span>
-        </button>
+      {/* 6. Listen / Share / Reminder */}
+      <div className="actions">
+        <ListenButton text={result.darija_summary} />
+        <ShareButton result={result} />
+        <ReminderButton result={result} />
       </div>
+
+      {/* 7. Safety note (moved to the top as a banner when confidence is low) */}
+      {!lowConfidence && <SafetyNote />}
+
+      {/* 8. Secondary action */}
+      <button type="button" className="btn btn-ghost btn-block" onClick={onRetake}>
+        <span aria-hidden="true">📸</span> صوّر ورقة أخرى
+      </button>
+
+      {previewUrl && (
+        <div className="photo-thumb">
+          {/* eslint-disable-next-line @next/next/no-img-element -- local object URL */}
+          <img src={previewUrl} alt="" aria-hidden="true" />
+          <span>التصويرة ديالك ما تحفظاتش، غير كتبان هنا دابا.</span>
+        </div>
+      )}
     </div>
   );
 }

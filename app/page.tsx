@@ -2,7 +2,8 @@
 
 import { Suspense, useCallback, useEffect, useReducer, useRef } from "react";
 import { useSearchParams } from "next/navigation";
-import UploadPanel from "@/components/UploadPanel";
+import BrandMark from "@/components/BrandMark";
+import Landing from "@/components/Landing";
 import Loading from "@/components/Loading";
 import ResultCard from "@/components/ResultCard";
 import ErrorState, { ErrorStateKind } from "@/components/ErrorState";
@@ -15,7 +16,7 @@ type State =
   | { screen: "idle" }
   | { screen: "compressing" }
   | { screen: "uploading"; previewUrl: string }
-  | { screen: "result"; result: ReadResult }
+  | { screen: "result"; result: ReadResult; previewUrl: string | null }
   | { screen: "error"; error: ErrorStateKind };
 
 type Action =
@@ -27,14 +28,18 @@ type Action =
   | { type: "API_ERROR"; error: ClientError }
   | { type: "RETRY" };
 
-function reducer(_state: State, action: Action): State {
+function reducer(state: State, action: Action): State {
   switch (action.type) {
     case "PHOTO_CHOSEN":
       return { screen: "compressing" };
     case "COMPRESSED":
       return { screen: "uploading", previewUrl: action.previewUrl };
     case "RESULT_OK":
-      return { screen: "result", result: action.result };
+      return {
+        screen: "result",
+        result: action.result,
+        previewUrl: state.screen === "uploading" ? state.previewUrl : null,
+      };
     case "RESULT_UNREADABLE":
       return { screen: "error", error: { kind: "unreadable" } };
     case "RESULT_NOT_A_DOCUMENT":
@@ -72,6 +77,13 @@ function PageInner() {
   const [state, dispatch] = useReducer(reducer, { screen: "idle" });
   const searchParams = useSearchParams();
   const previewUrlRef = useRef<string | null>(null);
+  const mockParam = searchParams?.get("mock") ?? null;
+  const isDemo = mockForParam(mockParam) !== null;
+
+  // Every screen change starts at the top (the landing page is long).
+  useEffect(() => {
+    window.scrollTo({ top: 0 });
+  }, [state.screen]);
 
   // Revoke the thumbnail object URL whenever we leave the result screen.
   useEffect(() => {
@@ -92,8 +104,7 @@ function PageInner() {
         previewUrlRef.current = previewUrl;
         dispatch({ type: "COMPRESSED", previewUrl });
 
-        // Dev-only mock switch: ?mock=ok|unreadable|scam
-        const mockParam = searchParams?.get("mock") ?? null;
+        // Demo-only mock switch: ?mock=ok|unreadable|scam (a DEMO banner is shown)
         const mock = mockForParam(mockParam);
 
         const result = mock ?? (await readDocument({ imageBase64: base64, mimeType }));
@@ -109,28 +120,64 @@ function PageInner() {
         dispatch({ type: "API_ERROR", error: err as ClientError });
       }
     },
-    [searchParams]
+    [mockParam]
   );
 
   const handleRetake = useCallback(() => {
     dispatch({ type: "RETRY" });
   }, []);
 
+  const busy = state.screen === "compressing" || state.screen === "uploading";
+
   return (
-    <main className="page">
-      {state.screen === "idle" && <UploadPanel onFileChosen={handleFileChosen} />}
-
-      {state.screen === "compressing" && <Loading />}
-
-      {state.screen === "uploading" && <Loading previewUrl={state.previewUrl} />}
-
-      {state.screen === "result" && (
-        <ResultCard result={state.result} onRetake={handleRetake} />
+    <>
+      {isDemo && (
+        <div className="demo-banner" role="note">
+          🧪 DEMO — نتيجة تجريبية، ماشي قراية حقيقية
+        </div>
       )}
 
-      {state.screen === "error" && (
-        <ErrorState error={state.error} onRetry={handleRetake} />
-      )}
-    </main>
+      <header className="topbar">
+        <div className="container topbar-inner">
+          <button
+            type="button"
+            className="brand"
+            onClick={handleRetake}
+            disabled={busy}
+            aria-label="Qra Lia — الرئيسية"
+          >
+            <BrandMark />
+            <span className="brand-name">
+              <strong>اقرا ليا</strong>
+              <span>Qra Lia</span>
+            </span>
+          </button>
+          {state.screen !== "idle" && !busy && (
+            <button type="button" className="topbar-chip" onClick={handleRetake}>
+              <span aria-hidden="true">📸</span> ورقة جديدة
+            </button>
+          )}
+          {state.screen === "idle" && <span className="topbar-chip">🔒 بلا تسجيل</span>}
+        </div>
+      </header>
+
+      <main>
+        {state.screen === "idle" && <Landing onFileChosen={handleFileChosen} />}
+
+        {state.screen !== "idle" && (
+          <div className="app-column">
+            {state.screen === "compressing" && <Loading />}
+
+            {state.screen === "uploading" && <Loading previewUrl={state.previewUrl} />}
+
+            {state.screen === "result" && (
+              <ResultCard result={state.result} previewUrl={state.previewUrl} onRetake={handleRetake} />
+            )}
+
+            {state.screen === "error" && <ErrorState error={state.error} onRetry={handleRetake} />}
+          </div>
+        )}
+      </main>
+    </>
   );
 }
