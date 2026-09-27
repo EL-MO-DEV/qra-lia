@@ -41,17 +41,22 @@ function fail(requestId: string, status: number, error: ApiErrorCode, darija_mes
 type Provider = ReadResult["provider"];
 type Extractor = (b64: string, mime: string, retry?: boolean) => Promise<ModelExtraction>;
 
+function errorDetail(e: unknown): string {
+  return e instanceof Error ? e.message.slice(0, 300) : "unknown";
+}
+
 /** One provider, with a single retry when the reply is not valid JSON. Null = give up on it. */
 async function tryProvider(requestId: string, name: Provider, extract: Extractor, b64: string, mime: string) {
   try {
     return await extract(b64, mime);
   } catch (e) {
-    console.warn(JSON.stringify({ requestId, provider: name, failed: e instanceof InvalidModelOutput ? "invalid_json" : "provider" }));
+    // detail = HTTP status + provider message (e.g. "gemini http 400: API key not valid"), never document data
+    console.warn(JSON.stringify({ requestId, provider: name, failed: e instanceof InvalidModelOutput ? "invalid_json" : "provider", detail: errorDetail(e) }));
     if (!(e instanceof InvalidModelOutput)) return null;
     try {
       return await extract(b64, mime, true);
-    } catch {
-      console.warn(JSON.stringify({ requestId, provider: name, failed: "retry" }));
+    } catch (retryError) {
+      console.warn(JSON.stringify({ requestId, provider: name, failed: "retry", detail: errorDetail(retryError) }));
       return null;
     }
   }
