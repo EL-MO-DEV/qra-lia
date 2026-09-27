@@ -62,7 +62,8 @@ export type ModelExtraction = z.infer<typeof ModelExtractionSchema>;
 /** Strip ```json fences / surrounding prose, then validate. Throws InvalidModelOutput. */
 export function parseModelOutput(raw: string | null | undefined): ModelExtraction {
   if (!raw || !raw.trim()) throw new InvalidModelOutput("empty model output");
-  let json = raw.trim();
+  // Reasoning models (e.g. Qwen on Groq) may prepend <think>…</think>; it can contain braces.
+  let json = raw.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
   const fenced = /^```(?:json)?\s*\n([\s\S]*?)```/.exec(json);
   if (fenced) json = fenced[1].trim();
   const start = json.indexOf("{");
