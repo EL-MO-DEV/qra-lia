@@ -1,0 +1,17 @@
+*                      @MONCEF_GITHUB
+/app/api/              @BACKEND_GITHUB
+/lib/gemini.ts         @BACKEND_GITHUB
+/lib/groq.ts           @BACKEND_GITHUB
+/lib/prompt.ts         @BACKEND_GITHUB
+/lib/schema.ts         @BACKEND_GITHUB
+/lib/mask.ts           @BACKEND_GITHUB
+/lib/rules.ts          @BACKEND_GITHUB
+/app/page.tsx          @FRONTEND_GITHUB
+/app/globals.css       @FRONTEND_GITHUB
+/components/UploadPanel.tsx  @FRONTEND_GITHUB
+/components/Loading.tsx      @FRONTEND_GITHUB
+/components/ResultCard.tsx   @FRONTEND_GITHUB
+/components/ErrorState.tsx   @FRONTEND_GITHUB
+/components/SafetyNote.tsx   @FRONTEND_GITHUB
+/lib/compress.ts       @FRONTEND_GITHUB
+/lib/api.ts            @FRONTEND_GITHUB
