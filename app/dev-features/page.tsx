@@ -4,7 +4,9 @@ import ListenButton from "@/components/ListenButton";
 import ReminderButton from "@/components/ReminderButton";
 import ShareButton from "@/components/ShareButton";
 import { MOCK_OK, MOCK_SCAM } from "@/lib/mock";
+import { buildShareText } from "@/lib/share";
 import type { ReadResult } from "@/lib/types";
+import VoiceDebug from "./VoiceDebug";
 
 // Dev-only test bench for the feature buttons (Part B). Not linked from the app.
 export const metadata: Metadata = {
@@ -15,6 +17,15 @@ export const metadata: Metadata = {
 const CASES: { name: string; result: ReadResult }[] = [
   { name: "MOCK_OK", result: MOCK_OK },
   { name: "MOCK_SCAM", result: MOCK_SCAM },
+  {
+    // Long text + a decimal amount: checks sentence splitting and number formatting.
+    name: "LONG_TEXT",
+    result: {
+      ...MOCK_OK,
+      amount: { value: 1234.5, currency: "MAD" },
+      darija_summary: Array(4).fill(MOCK_OK.darija_summary).join(" "),
+    },
+  },
 ];
 
 export default function DevFeaturesPage() {
@@ -23,6 +34,7 @@ export default function DevFeaturesPage() {
       <h1 className="text-2xl font-bold">🧪 Dev features</h1>
 
       <InstallPrompt />
+      <VoiceDebug />
 
       {CASES.map(({ name, result }) => (
         <section key={name} className="flex flex-col gap-3">
@@ -33,6 +45,10 @@ export default function DevFeaturesPage() {
           <ListenButton text={result.darija_summary} />
           <ShareButton result={result} />
           <ReminderButton result={result} />
+          <details>
+            <summary className="cursor-pointer text-sm opacity-80">Share text</summary>
+            <pre className="whitespace-pre-wrap text-base leading-relaxed">{buildShareText(result)}</pre>
+          </details>
         </section>
       ))}
     </main>
