@@ -67,7 +67,8 @@ function fail(status: number, error: string, detail?: string) {
 }
 
 export async function POST(request: Request) {
-  const key = process.env.GEMINI_API_KEY?.trim();
+  // Optional dedicated key (e.g. a billing-enabled project) so the voice never eats the reading quota.
+  const key = process.env.GEMINI_TTS_API_KEY?.trim() || process.env.GEMINI_API_KEY?.trim();
   if (!key) return fail(502, "tts_unavailable", "no key");
 
   // Same-origin only: this endpoint spends our TTS quota.

@@ -9,7 +9,7 @@ type Props = {
   /** Darija label + French subtitle (default: "سمع الشرح" / "Écouter l'explication"). */
   label?: string;
   sub?: string;
-  /** Download the audio before the tap (default true). Off on the home page to save TTS quota. */
+  /** Download the audio before the tap (default false: each download spends TTS quota, so only on tap). */
   prefetch?: boolean;
 };
 
@@ -17,7 +17,7 @@ type Props = {
  * 🔊 Listen. Plays the server voice (Gemini TTS: one natural voice, same on every phone),
  * downloaded as soon as the result shows. Falls back to the phone's Arabic voice if it fails.
  */
-export function ListenButton({ text, label = "سمع الشرح", sub = "Écouter l'explication", prefetch = true }: Props) {
+export function ListenButton({ text, label = "سمع الشرح", sub = "Écouter l'explication", prefetch = false }: Props) {
   const [browserVoice, setBrowserVoice] = useState<SpeechSynthesisVoice | null>(null);
   const [playing, setPlaying] = useState(false);
   const [loading, setLoading] = useState(false);
