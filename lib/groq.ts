@@ -3,8 +3,8 @@
 import { RETRY_INSTRUCTION, SYSTEM_PROMPT, USER_INSTRUCTION } from "./prompt";
 import { MODEL_JSON_SCHEMA, ProviderError, parseModelOutput, providerErrorDetail, type ModelExtraction } from "./schema";
 
-const TIMEOUT_MS = 15_000;
-const DEFAULT_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct";
+const TIMEOUT_MS = 12_000; // Gemini budget (16 s) + Groq stays under the app's 30 s timeout
+const DEFAULT_MODEL = "qwen/qwen3.6-27b";
 
 // Trimmed: a pasted key or model name with a trailing space/newline breaks the request.
 function apiKey(): string {
