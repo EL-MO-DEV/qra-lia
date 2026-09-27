@@ -166,9 +166,8 @@ async function groqSpeech(text: string, lang: "ar" | "en", deadline: number): Pr
   if (!key) throw new Error("groq tts: no key");
   const { model } = GROQ_TTS[lang];
   let voice = GROQ_TTS[lang].voice;
-  const parts: Buffer[] = [];
-  let rate = 0;
-  for (const chunk of chunkText(text, GROQ_CHUNK_CHARS)) {
+
+  const speakChunk = async (chunk: string, canSwitchVoice: boolean): Promise<{ data: Buffer; rate: number }> => {
     for (let attempt = 0; ; attempt++) {
       const left = deadline - Date.now();
       if (left < 3_000) throw new Error("groq tts: out of time");
@@ -181,22 +180,26 @@ async function groqSpeech(text: string, lang: "ar" | "en", deadline: number): Pr
       if (res.ok) {
         const wav = parseWav(Buffer.from(await res.arrayBuffer()));
         if (!wav || wav.bits !== 16 || wav.channels !== 1) throw new Error("groq tts: unexpected audio format");
-        if (rate && wav.rate !== rate) throw new Error("groq tts: mixed sample rates");
-        rate = wav.rate;
-        parts.push(wav.data);
-        break;
+        return { data: wav.data, rate: wav.rate };
       }
       const body = (await res.json().catch(() => ({}))) as { error?: { message?: string } };
       const message = body.error?.message ?? "";
-      const suggested = res.status === 400 && attempt === 0 ? voiceFromError(message) : null;
+      const suggested = canSwitchVoice && res.status === 400 && attempt === 0 ? voiceFromError(message) : null;
       if (suggested && suggested !== voice) {
         voice = suggested; // wrong default voice name: use the first valid one Groq lists
         continue;
       }
       throw new Error(`groq tts http ${res.status}: ${message.slice(0, 180)} (model ${model}, voice ${voice})`);
     }
-  }
-  const pcm = Buffer.concat(parts);
+  };
+
+  // First chunk alone (it settles the voice name), then the rest in parallel: ~11 s → ~5 s.
+  const [first, ...rest] = chunkText(text, GROQ_CHUNK_CHARS);
+  if (!first) throw new Error("groq tts: empty text");
+  const parts = [await speakChunk(first, true), ...(await Promise.all(rest.map((c) => speakChunk(c, false))))];
+  const rate = parts[0].rate;
+  if (parts.some((p) => p.rate !== rate)) throw new Error("groq tts: mixed sample rates");
+  const pcm = Buffer.concat(parts.map((p) => p.data));
   return { wav: pcmToWav(resample(pcm, rate, OUTPUT_RATE), OUTPUT_RATE), detail: `${model} / ${voice}` };
 }
 
