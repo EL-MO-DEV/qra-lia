@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { Loader2, Square, Volume2, VolumeX } from "lucide-react";
 import { useLang } from "@/lib/i18n";
 import { pickArabicVoice, pickEnglishVoice, speak, stopSpeaking, watchArabicVoice } from "@/lib/tts";
 import { playVoice, prefetchVoice, stopVoice } from "@/lib/voice";
@@ -82,10 +83,29 @@ export function ListenButton({ text, label, sub = "Écouter l'explication", pref
 
   return (
     <>
-      <button type="button" onClick={onClick} className="feature-btn feature-btn-primary" aria-live="polite">
+      <button
+        type="button"
+        onClick={onClick}
+        className={`feature-btn feature-btn-primary${playing ? " is-playing" : ""}`}
+        aria-live="polite"
+      >
         <span className="feature-btn-icon" aria-hidden="true">
-          {loading ? "⏳" : playing ? "⏹️" : "🔊"}
+          {loading ? (
+            <Loader2 size={26} strokeWidth={2.4} className="spin" />
+          ) : playing ? (
+            <Square size={22} strokeWidth={2.6} fill="currentColor" />
+          ) : (
+            <Volume2 size={26} strokeWidth={2.4} />
+          )}
         </span>
+        {playing && !loading && (
+          <span className="eq" aria-hidden="true">
+            <i />
+            <i />
+            <i />
+            <i />
+          </span>
+        )}
         <span className="feature-btn-text">
           <span className="feature-btn-label">{loading ? t("loadingVoice") : playing ? t("stop") : label ?? t("listen")}</span>
           <span className="feature-btn-sub" lang="fr">
@@ -95,7 +115,7 @@ export function ListenButton({ text, label, sub = "Écouter l'explication", pref
       </button>
       {unavailable && (
         <p className="feature-note" role="status">
-          {t("voiceDown")}
+          <VolumeX size={18} strokeWidth={2.4} aria-hidden="true" /> {t("voiceDown")}
           <span className="fr" lang="fr">
             Voix indisponible pour le moment
           </span>

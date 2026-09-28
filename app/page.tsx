@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useReducer, useRef, useSyncExternalStore } from "react";
+import { Camera, FlaskConical, Languages } from "lucide-react";
 import BrandMark from "@/components/BrandMark";
 import Landing from "@/components/Landing";
 import Loading from "@/components/Loading";
@@ -130,7 +131,7 @@ export default function Page() {
     <>
       {isDemo && (
         <div className="demo-banner" role="note">
-          {t("demo")}
+          <FlaskConical size={18} strokeWidth={2.5} aria-hidden="true" /> {t("demo")}
         </div>
       )}
 
@@ -152,7 +153,7 @@ export default function Page() {
           <div className="topbar-actions">
             {state.screen !== "idle" && !busy && (
               <button type="button" className="topbar-chip" onClick={handleRetake} aria-label={t("newPaper")}>
-                <span aria-hidden="true">📸</span> <span className="chip-label">{t("newPaper")}</span>
+                <Camera size={20} strokeWidth={2.4} aria-hidden="true" /> <span className="chip-label">{t("newPaper")}</span>
               </button>
             )}
             <button
@@ -162,7 +163,7 @@ export default function Page() {
               disabled={busy}
               aria-label={t("switchLabel")}
             >
-              <span aria-hidden="true">🌐</span> {t("switchTo")}
+              <Languages size={20} strokeWidth={2.4} aria-hidden="true" /> {t("switchTo")}
             </button>
           </div>
         </div>
