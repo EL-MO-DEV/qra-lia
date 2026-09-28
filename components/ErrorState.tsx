@@ -1,5 +1,6 @@
 "use client";
 
+import { Camera, CircleAlert, FileQuestion, Hourglass, ImageOff, Lightbulb, WifiOff, type LucideIcon } from "lucide-react";
 import type { ClientError } from "@/lib/api";
 import { useLang, type StringKey } from "@/lib/i18n";
 
@@ -44,37 +45,49 @@ function showTips(error: ErrorStateKind): boolean {
   return false;
 }
 
-function iconFor(error: ErrorStateKind): string {
-  if (error.kind === "unreadable") return "🌫️";
-  if (error.kind === "not_a_document") return "📄";
-  if (error.kind === "api" && error.error.error === "network") return "📶";
-  if (error.kind === "api" && error.error.error === "rate_limited") return "⏳";
-  return "🧐";
+const ICONS = {
+  unreadable: ImageOff,
+  not_a_document: FileQuestion,
+  network: WifiOff,
+  rate_limited: Hourglass,
+  other: CircleAlert,
+} satisfies Record<string, LucideIcon>;
+
+function iconKey(error: ErrorStateKind): keyof typeof ICONS {
+  if (error.kind !== "api") return error.kind;
+  if (error.error.error === "network" || error.error.error === "rate_limited") return error.error.error;
+  return "other";
 }
+
+const TIPS: StringKey[] = ["tip1", "tip2", "tip3"];
 
 export default function ErrorState({ error, onRetry }: ErrorStateProps) {
   const { lang, t } = useLang();
+  const Icon = ICONS[iconKey(error)];
   // The server's darija_message is only used in Darija mode.
   const message =
     lang === "ar" && error.kind === "api" && error.error.darija_message ? error.error.darija_message : t(messageKey(error));
   return (
     <div className="card error-card" role="alert">
-      <p className="error-icon" aria-hidden="true">
-        {iconFor(error)}
-      </p>
+      <span className="error-icon" aria-hidden="true">
+        <Icon size={44} strokeWidth={2} />
+      </span>
       <p className="error-message">{message}</p>
 
       {showTips(error) && (
         <ul className="error-tips">
-          <li>{t("tip1")}</li>
-          <li>{t("tip2")}</li>
-          <li>{t("tip3")}</li>
+          {TIPS.map((tip) => (
+            <li key={tip}>
+              <Lightbulb size={20} strokeWidth={2.3} aria-hidden="true" />
+              <span>{t(tip)}</span>
+            </li>
+          ))}
         </ul>
       )}
 
-      <button type="button" className="btn btn-primary btn-block" onClick={onRetry}>
-        <span aria-hidden="true">📸</span> {t("retry")}
-        <span className="fr" lang="fr" style={{ display: "inline", color: "inherit", opacity: 0.85 }}>
+      <button type="button" className="btn btn-primary btn-block btn-lg" onClick={onRetry}>
+        <Camera size={24} strokeWidth={2.3} aria-hidden="true" /> {t("retry")}
+        <span className="fr-inline" lang="fr">
           Réessayer
         </span>
       </button>

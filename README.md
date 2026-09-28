@@ -43,7 +43,9 @@ Built for elderly and low-literacy users:
 - one giant button per screen;
 - text at least 20 px, buttons at least 56 px;
 - every label has an icon, the Darija word and a small French subtitle;
-- light and dark mode.
+- light and dark mode, in a Moroccan "Majorelle" design (Majorelle blue, marigold, zellige texture).
+
+📲 **Installable app (PWA):** "Add to home screen" on Android (install button) and iPhone (hint), app icon, and an offline page in Darija + French when there's no connection. Links shared on WhatsApp show a preview card.
 
 ## How it works
 

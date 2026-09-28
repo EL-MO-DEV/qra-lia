@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { IBM_Plex_Sans_Arabic } from "next/font/google";
+import RegisterSW from "@/components/RegisterSW";
 import { LangProvider } from "@/lib/i18n";
 import "./globals.css";
 
@@ -7,7 +8,7 @@ import "./globals.css";
 // System fallbacks cover iOS (Geeza Pro), Android (Noto) and Windows (Segoe UI / Tahoma).
 const qraFont = IBM_Plex_Sans_Arabic({
   subsets: ["arabic", "latin"],
-  weight: ["400", "500", "700"],
+  weight: ["400", "500", "600", "700"],
   display: "swap",
   variable: "--font-qra",
   fallback: [
@@ -40,7 +41,7 @@ export const metadata: Metadata = {
     description: DESCRIPTION,
     locale: "ar_MA",
   },
-  twitter: { card: "summary", title: "Qra Lia — اقرا ليا", description: DESCRIPTION },
+  twitter: { card: "summary_large_image", title: "Qra Lia — اقرا ليا", description: DESCRIPTION },
   appleWebApp: { capable: true, title: "Qra Lia", statusBarStyle: "default" },
   // Don't turn numbers on papers (contract numbers, amounts) into tappable phone links.
   formatDetection: { telephone: false },
@@ -53,8 +54,8 @@ export const viewport: Viewport = {
   viewportFit: "cover",
   colorScheme: "light dark",
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f6f1e7" },
-    { media: "(prefers-color-scheme: dark)", color: "#0e1412" },
+    { media: "(prefers-color-scheme: light)", color: "#f5f7ff" },
+    { media: "(prefers-color-scheme: dark)", color: "#060b22" },
   ],
 };
 
@@ -67,6 +68,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className={`${qraFont.className} min-h-full flex flex-col`}>
         <LangProvider>{children}</LangProvider>
+        <RegisterSW />
       </body>
     </html>
   );

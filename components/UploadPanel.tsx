@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef } from "react";
+import { ArrowLeft, Camera, ImageIcon, LockKeyhole } from "lucide-react";
 import { useLang } from "@/lib/i18n";
 
 type UploadPanelProps = {
@@ -27,21 +28,21 @@ export default function UploadPanel({ onFileChosen }: UploadPanelProps) {
     <div className="upload-panel">
       <button type="button" className="btn-camera" onClick={() => cameraInputRef.current?.click()}>
         <span className="btn-camera-icon" aria-hidden="true">
-          📸
+          <Camera size={34} strokeWidth={2.2} />
         </span>
-        <span>
+        <span className="btn-camera-text">
           <span className="btn-camera-main">{t("takePhoto")}</span>
           <span className="btn-camera-sub" lang="fr">
             Prendre une photo
           </span>
         </span>
-        <span className="btn-camera-arrow" aria-hidden="true">
-          <span className="flip-ltr">←</span>
+        <span className="btn-camera-arrow flip-ltr" aria-hidden="true">
+          <ArrowLeft size={26} strokeWidth={2.6} />
         </span>
       </button>
 
       <button type="button" className="link-gallery" onClick={() => galleryInputRef.current?.click()}>
-        <span aria-hidden="true">🖼️</span>
+        <ImageIcon size={22} strokeWidth={2.2} aria-hidden="true" />
         <span>{t("fromGallery")}</span>
         <span className="fr" lang="fr">
           ou depuis la galerie
@@ -49,7 +50,7 @@ export default function UploadPanel({ onFileChosen }: UploadPanelProps) {
       </button>
 
       <p className="reassurance">
-        <span aria-hidden="true">🔒</span>
+        <LockKeyhole size={17} strokeWidth={2.4} aria-hidden="true" />
         <span>{t("notStored")}</span>
         <span className="fr" lang="fr">
           Votre photo n&apos;est pas enregistrée

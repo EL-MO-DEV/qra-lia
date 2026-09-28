@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { BellRing, CircleCheck } from "lucide-react";
 import { useLang } from "@/lib/i18n";
 import { downloadIcs } from "@/lib/ics";
 import type { ReadResult } from "@/lib/types";
@@ -20,14 +21,14 @@ export function ReminderButton({ result }: Props) {
     <>
       <button
         type="button"
-        className="feature-btn"
+        className="feature-btn feature-btn-remind"
         onClick={() => {
           downloadIcs(result);
           setDone(true);
         }}
       >
         <span className="feature-btn-icon" aria-hidden="true">
-          ⏰
+          <BellRing size={24} strokeWidth={2.3} />
         </span>
         <span className="feature-btn-text">
           <span className="feature-btn-label">{t("remind")}</span>
@@ -38,7 +39,7 @@ export function ReminderButton({ result }: Props) {
       </button>
       {done && (
         <p className="feature-toast" role="status">
-          {t("reminded")}
+          <CircleCheck size={18} strokeWidth={2.5} aria-hidden="true" /> {t("reminded")}
         </p>
       )}
     </>

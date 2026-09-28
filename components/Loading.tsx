@@ -1,16 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { CheckCircle2, FileText, Loader2, MessageCircleMore, ScanSearch, Upload, type LucideIcon } from "lucide-react";
 import { useLang, type StringKey } from "@/lib/i18n";
 
 type LoadingProps = {
   previewUrl?: string | null;
 };
 
-const STEPS: { at: number; label: StringKey; icon: string }[] = [
-  { at: 0, label: "stepSend", icon: "📤" },
-  { at: 2500, label: "stepRead", icon: "🔎" },
-  { at: 6000, label: "stepExplain", icon: "🗣️" },
+const STEPS: { at: number; label: StringKey; Icon: LucideIcon }[] = [
+  { at: 0, label: "stepSend", Icon: Upload },
+  { at: 2500, label: "stepRead", Icon: ScanSearch },
+  { at: 6000, label: "stepExplain", Icon: MessageCircleMore },
 ];
 
 /**
@@ -36,7 +37,7 @@ export default function Loading({ previewUrl }: LoadingProps) {
           // eslint-disable-next-line @next/next/no-img-element -- local object URL, nothing to optimize
           <img src={previewUrl} alt="" aria-hidden="true" />
         ) : (
-          <span aria-hidden="true">📄</span>
+          <FileText size={72} strokeWidth={1.6} aria-hidden="true" className="scan-placeholder" />
         )}
         <span className="scan-line" aria-hidden="true" />
         <span className="scan-corners" aria-hidden="true" />
@@ -50,12 +51,23 @@ export default function Loading({ previewUrl }: LoadingProps) {
       </p>
 
       <ol className="loading-steps">
-        {STEPS.map((s, i) => (
-          <li key={s.label} className={i < active ? "is-done" : i === active ? "is-active" : undefined}>
-            <span aria-hidden="true">{i < active ? "✅" : s.icon}</span>
-            {t(s.label)}
-          </li>
-        ))}
+        {STEPS.map(({ label, Icon }, i) => {
+          const state = i < active ? "is-done" : i === active ? "is-active" : undefined;
+          return (
+            <li key={label} className={state}>
+              <span className="loading-step-icon" aria-hidden="true">
+                {i < active ? (
+                  <CheckCircle2 size={22} strokeWidth={2.4} />
+                ) : i === active ? (
+                  <Loader2 size={22} strokeWidth={2.4} className="spin" />
+                ) : (
+                  <Icon size={22} strokeWidth={2.2} />
+                )}
+              </span>
+              {t(label)}
+            </li>
+          );
+        })}
       </ol>
 
       {elapsed >= 8000 && (
