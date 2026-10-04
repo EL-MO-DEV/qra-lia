@@ -15,6 +15,8 @@ import makeWASocket, { DisconnectReason, downloadMediaMessage, useMultiFileAuthS
 import { Mp3Encoder } from "@breezystack/lamejs";
 import pino from "pino";
 import { createServer } from "node:http";
+import { readFile, rename, writeFile } from "node:fs/promises";
+import path from "node:path";
 import QRCode from "qrcode";
 import qrcode from "qrcode-terminal";
 
@@ -27,12 +29,18 @@ const MAX_IMAGE_BYTES = 3 * 1024 * 1024;
 const AUTH_DIR = process.env.AUTH_DIR || "auth";
 const QR_PASSWORD = process.env.QR_PASSWORD || "";
 
+const REMINDERS_FILE = process.env.REMINDERS_FILE || path.join(path.dirname(path.resolve(AUTH_DIR)), "qra-reminders.json");
+const CONVERSATION_MS = 30 * 60_000; // questions about the last paper are accepted for 30 min
+const YES = /^(ايه|اييه|اه|آه|نعم|واخا|وخا|ok|okay|oui|yes|wah|iyeh|ah|eh|👍)(?=[\s!.,؟?]|$)/iu;
+const NO = /^(لا|لالا|no|non|la|lla|👎)(?=[\s!.,؟?]|$)/iu;
+const STOP = /(لغي|حبس|وقف التذكير|stop)/i;
+
 // Live status for the small web page (needed on a server, where nobody sees the terminal).
 const status = { connected: false, qr: "", since: new Date().toISOString() };
 
 const TEXT = {
   welcome:
-    "مرحبا بيك فـ Qra Lia 👋\nصيفط ليا *تصويرة ديال الورقة* (فاتورة، رسالة ديال البنكة، CNSS، الإدارة، ولا SMS مشكوك فيه) ونشرحها ليك بالدارجة، بالكتابة وبالصوت.\n\n🔒 التصويرة ما كتحفظش.\n🧪 هادي نسخة تجريبية.",
+    "مرحبا بيك فـ Qra Lia 👋\nصيفط ليا *تصويرة ديال الورقة* (فاتورة، رسالة ديال البنكة، CNSS، الإدارة، ولا SMS مشكوك فيه) ونشرحها ليك بالدارجة، بالكتابة وبالصوت.\n🎤 من بعد تقدر تسولني على الورقة بڤوكال ولا بالكتابة.\n⏰ ونقدر نفكرك قبل الأجل.\n\n🔒 التصويرة ما كتحفظش.\n🧪 هادي نسخة تجريبية.",
   reading: "⏳ كنقرا الورقة… شي ثواني.",
   tooBig: "التصويرة كبيرة بزاف، صيفطها عادية 📸",
   tooMany: "بزاف ديال الأوراق دابا 🙏 تسنى شي دقايق وعاود.",
@@ -43,6 +51,10 @@ const TEXT = {
 const MONTHS = ["يناير", "فبراير", "مارس", "أبريل", "ماي", "يونيو", "يوليوز", "غشت", "شتنبر", "أكتوبر", "نونبر", "دجنبر"];
 const sessions = new Map(); // person → session end time
 const reads = new Map(); // person → timestamps of recent reads
+const lastPaper = new Map(); // person → { result, until } — context for follow-up questions (memory only)
+const reminderOffers = new Map(); // person → { chat, result, until } — waiting for "yes" / "no"
+let reminders = []; // [{ id, chat, at, text, spoken }] — saved on the volume, deleted once sent
+let currentSock = null;
 
 const digits = (jid = "") => jid.split("@")[0].split(":")[0].replace(/\D/g, "");
 
@@ -56,6 +68,36 @@ function formatResult(r) {
   if (m) lines.push(`📅 قبل ${Number(m[3])} ${MONTHS[Number(m[2]) - 1]} ${m[1]}${r.days_left !== null ? ` (بقاو ${r.days_left} يوم)` : ""}`);
   if (r.action) lines.push(`✅ ${r.action}`);
   return `${lines.join("\n")}\n\n${r.darija_summary}\n\n${TEXT.safety}`;
+}
+
+function formatDate(iso) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || "");
+  return m ? `${Number(m[3])} ${MONTHS[Number(m[2]) - 1]} ${m[1]}` : iso;
+}
+
+async function loadReminders() {
+  try {
+    reminders = JSON.parse(await readFile(REMINDERS_FILE, "utf8"));
+  } catch {
+    reminders = [];
+  }
+}
+
+async function saveReminders() {
+  const tmp = `${REMINDERS_FILE}.tmp`;
+  await writeFile(tmp, JSON.stringify(reminders));
+  await rename(tmp, REMINDERS_FILE);
+}
+
+/** Text → voice note (MP3) through the live /api/tts. Null when the voice is unavailable. */
+async function voiceNote(text) {
+  const tts = await fetch(`${API_BASE}/api/tts`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    signal: AbortSignal.timeout(60_000),
+    body: JSON.stringify({ text: text.slice(0, 800), lang: "ar" }),
+  }).catch(() => null);
+  return tts?.ok ? wavToMp3(new Uint8Array(await tts.arrayBuffer())) : null;
 }
 
 function wavToMp3(wav) {
@@ -111,22 +153,99 @@ async function readPaper(sock, chat, person, msg) {
   if (r.status !== "ok") return sock.sendMessage(chat, { text: `📸 ${r.darija_summary}` }, { quoted: msg });
   await sock.sendMessage(chat, { text: formatResult(r) }, { quoted: msg });
 
+  lastPaper.set(person, { result: r, until: Date.now() + CONVERSATION_MS });
+
   // Voice note (best effort: the text already arrived)
   await sock.sendPresenceUpdate("recording", chat);
-  const spoken = [r.scam_suspected ? "رد البال! هاد الورقة فيها علامات ديال النصب." : "", r.darija_summary].filter(Boolean).join(" ").slice(0, 800);
-  const tts = await fetch(`${API_BASE}/api/tts`, {
+  const spoken = [r.scam_suspected ? "رد البال! هاد الورقة فيها علامات ديال النصب." : "", r.darija_summary].filter(Boolean).join(" ");
+  const mp3 = await voiceNote(spoken);
+  if (mp3) await sock.sendMessage(chat, { audio: mp3, mimetype: "audio/mpeg" });
+  await sock.sendPresenceUpdate("paused", chat);
+
+  // Offer a reminder when there is a deadline at least 2 days away.
+  const next = ["🎤 عندك سؤال على هاد الورقة؟ صيفط ليا ڤوكال ولا كتب."];
+  if (r.deadline && typeof r.days_left === "number" && r.days_left >= 2 && !r.scam_suspected) {
+    reminderOffers.set(person, { chat, result: r, until: Date.now() + CONVERSATION_MS });
+    next.unshift(`⏰ بغيتي نفكرك يوماين قبل ${formatDate(r.deadline)}؟ جاوب *ايه* ولا *لا*.`);
+  }
+  await sock.sendMessage(chat, { text: next.join("\n\n") });
+}
+
+async function addReminder(sock, chat, person, r) {
+  const [y, m, d] = r.deadline.split("-").map(Number);
+  const at = Math.max(Date.UTC(y, m - 1, d - 2, 9, 0), Date.now() + 60_000); // 10:00 Morocco time
+  const amount = r.amount ? `${r.amount.value} درهم` : "";
+  const what = [r.doc_type, r.sender].filter(Boolean).join(" — ");
+  const text = ["⏰ *تذكير من Qra Lia*", what && `📄 ${what}`, amount && `💰 ${amount}`, `📅 الأجل: ${formatDate(r.deadline)}`, r.action && `✅ ${r.action}`]
+    .filter(Boolean)
+    .join("\n");
+  const spoken = `تذكير من اقرا ليا. ${what}. ${amount ? `خاصك تخلّص ${amount}. ` : ""}الأجل هو ${formatDate(r.deadline)}. ${r.action || ""}`;
+  reminders.push({ id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, chat, at, text, spoken });
+  await saveReminders();
+  const when = new Date(at);
+  await sock.sendMessage(chat, {
+    text: `✅ واخا! غادي نفكرك نهار ${when.getUTCDate()} ${MONTHS[when.getUTCMonth()]} فالصباح.\nإلا بغيتي تلغي التذكير كتب *لغي*.`,
+  });
+}
+
+async function sendDueReminders() {
+  if (!currentSock || !status.connected) return;
+  const now = Date.now();
+  const due = reminders.filter((x) => x.at <= now);
+  if (!due.length) return;
+  for (const x of due) {
+    try {
+      await currentSock.sendMessage(x.chat, { text: x.text });
+      const mp3 = await voiceNote(x.spoken);
+      if (mp3) await currentSock.sendMessage(x.chat, { audio: mp3, mimetype: "audio/mpeg" });
+      console.log(new Date().toISOString(), "reminder sent");
+    } catch (e) {
+      console.warn("reminder error:", e?.message?.slice(0, 120));
+    }
+  }
+  reminders = reminders.filter((x) => !due.includes(x));
+  await saveReminders();
+}
+
+async function answer(sock, chat, person, question, msg) {
+  const paper = lastPaper.get(person);
+  if (!paper || paper.until < Date.now()) return false;
+  await sock.sendPresenceUpdate("composing", chat);
+  const res = await fetch(`${API_BASE}/api/ask`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    signal: AbortSignal.timeout(60_000),
-    body: JSON.stringify({ text: spoken, lang: "ar" }),
-  }).catch(() => null);
-  if (tts?.ok) await sock.sendMessage(chat, { audio: wavToMp3(new Uint8Array(await tts.arrayBuffer())), mimetype: "audio/mpeg" });
+    signal: AbortSignal.timeout(30_000),
+    body: JSON.stringify({ question, context: paper.result, lang: "ar" }),
+  });
+  if (!res.ok) throw new Error(`ask http ${res.status}`);
+  const { answer: reply } = await res.json();
+  paper.until = Date.now() + CONVERSATION_MS;
+  console.log(new Date().toISOString(), "question answered"); // never log the question
+  await sock.sendMessage(chat, { text: `💬 ${reply}` }, { quoted: msg });
+  await sock.sendPresenceUpdate("recording", chat);
+  const mp3 = await voiceNote(reply);
+  if (mp3) await sock.sendMessage(chat, { audio: mp3, mimetype: "audio/mpeg" });
   await sock.sendPresenceUpdate("paused", chat);
+  return true;
+}
+
+async function transcribe(msg) {
+  const audio = await downloadMediaMessage(msg, "buffer", {});
+  const mimeType = msg.message?.audioMessage?.mimetype?.split(";")[0] || "audio/ogg";
+  const res = await fetch(`${API_BASE}/api/stt`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    signal: AbortSignal.timeout(30_000),
+    body: JSON.stringify({ audioBase64: audio.toString("base64"), mimeType, lang: "ar" }),
+  });
+  if (!res.ok) throw new Error(`stt http ${res.status}`);
+  return String((await res.json()).text || "").trim();
 }
 
 async function start() {
   const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR); // ⚠️ login session: never commit or share this folder
   const sock = makeWASocket({ auth: state, logger: pino({ level: process.env.LOG_LEVEL || "warn" }) });
+  currentSock = sock;
   sock.ev.on("creds.update", saveCreds);
 
   sock.ev.on("connection.update", ({ connection, lastDisconnect, qr }) => {
@@ -159,10 +278,40 @@ async function start() {
       const person = digits(msg.key.remoteJidAlt || msg.key.senderPn || chat);
       const text = msg.message?.conversation || msg.message?.extendedTextMessage?.text || msg.message?.imageMessage?.caption || "";
       const isImage = Boolean(msg.message?.imageMessage);
+      const isVoice = Boolean(msg.message?.audioMessage);
       const tester = ALLOWED.has(person);
       const inSession = (sessions.get(person) || 0) > Date.now();
+      const offer = reminderOffers.get(person);
 
       try {
+        // Reminder offer: "ايه" / "لا"
+        if (offer && offer.until > Date.now() && text && (YES.test(text.trim()) || NO.test(text.trim()))) {
+          reminderOffers.delete(person);
+          if (YES.test(text.trim())) await addReminder(sock, chat, person, offer.result);
+          else await sock.sendMessage(chat, { text: "مزيان 👍" });
+          continue;
+        }
+        if (text && STOP.test(text) && (tester || inSession)) {
+          const before = reminders.length;
+          reminders = reminders.filter((x) => x.chat !== chat);
+          if (before !== reminders.length) await saveReminders();
+          await sock.sendMessage(chat, { text: before !== reminders.length ? "✅ تلغاو التذكيرات ديالك." : "ما عندك حتى تذكير." });
+          continue;
+        }
+        // Question about the last paper, by voice note or text
+        if ((isVoice || (text && !isImage && !START_WORDS.test(text))) && (tester || inSession) && lastPaper.get(person)?.until > Date.now()) {
+          let question = text;
+          if (isVoice) {
+            question = await transcribe(msg);
+            if (!question) {
+              await sock.sendMessage(chat, { text: "ما فهمتش الڤوكال 🙏 عاود ولا كتب السؤال." });
+              continue;
+            }
+            await sock.sendMessage(chat, { text: `🎤 «${question}»` }, { quoted: msg });
+          }
+          await answer(sock, chat, person, question, msg);
+          continue;
+        }
         if (START_WORDS.test(text)) {
           sessions.set(person, Date.now() + SESSION_MS);
           if (!isImage) {
@@ -204,4 +353,6 @@ createServer(async (req, res) => {
   res.end(page(`<h1>Qra Lia bot</h1><p>${status.connected ? "✅ connected" : "⏳ not connected"}</p>`));
 }).listen(Number(process.env.PORT) || 3000, () => console.log(`🌐 status page on port ${Number(process.env.PORT) || 3000}`));
 
+await loadReminders();
+setInterval(() => sendDueReminders().catch((e) => console.warn("reminders:", e?.message)), 60_000);
 start();
