@@ -334,7 +334,7 @@ async function start() {
 
 // Web page: /health for the host, /qr?key=QR_PASSWORD to scan the login QR from a phone or laptop.
 const page = (body) =>
-  `<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="refresh" content="10"><title>Qra Lia bot</title><style>body{font-family:system-ui,sans-serif;background:#f5f7ff;color:#0b1533;display:grid;place-items:center;min-height:100vh;margin:0;text-align:center;padding:16px}main{background:#fff;border-radius:24px;padding:28px;box-shadow:0 10px 30px #1d3fd822;max-width:420px}img{width:280px;height:280px}</style></head><body><main>${body}</main></body></html>`;
+  `<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="refresh" content="10"><title>Qra Lia bot</title><style>body{font-family:system-ui,sans-serif;background:#f5f7f6;color:#111b21;display:grid;place-items:center;min-height:100vh;margin:0;text-align:center;padding:16px}main{background:#fff;border-radius:24px;padding:28px;box-shadow:0 10px 30px #00806922;max-width:420px}img{width:280px;height:280px}</style></head><body><main>${body}</main></body></html>`;
 
 createServer(async (req, res) => {
   const url = new URL(req.url || "/", "http://localhost");
