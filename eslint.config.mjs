@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Standalone WhatsApp prototype (its own package, not part of the web app)
+    "bot/**",
   ]),
 ]);
 

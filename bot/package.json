@@ -1,0 +1,16 @@
+{
+  "name": "qra-lia-whatsapp-prototype",
+  "private": true,
+  "type": "module",
+  "description": "Prototype WhatsApp bot on a personal number (unofficial). Runs on a PC/server, not on Vercel.",
+  "scripts": {
+    "start": "node index.mjs"
+  },
+  "dependencies": {
+    "@breezystack/lamejs": "^1.2.7",
+    "@hapi/boom": "^10.0.1",
+    "@whiskeysockets/baileys": "7.0.0-rc14",
+    "pino": "^10.4.0",
+    "qrcode-terminal": "^0.12.0"
+  }
+}

@@ -1,0 +1,3 @@
+node_modules/
+# WhatsApp login session: never commit or share
+auth/
