@@ -12,7 +12,22 @@ It's your personal number, so the bot **doesn't answer your friends' normal mess
 - testers listed in `ALLOWED_NUMBERS`, when they send a photo;
 - anyone who first writes **"Qra Lia"** or **"اقرا ليا"**. They get a welcome message, then their photos are read for 30 minutes.
 
-## Run it (Windows / Mac / Linux)
+## Put it live on Railway (always on, the whole team can test)
+1. <https://railway.com> → sign in with GitHub → **New Project** → **Deploy from GitHub repo** → `EL-MO-DEV/qra-lia`.
+2. Service → **Settings**:
+   - **Root Directory** = `bot`;
+   - **Networking → Generate Domain**.
+3. Service → **Variables**:
+   - `QR_PASSWORD` = a password you choose;
+   - `AUTH_DIR` = `/data/auth`;
+   - `ALLOWED_NUMBERS` = your number + the testers' numbers (e.g. `2126XXXXXXXX,2127YYYYYYYY`).
+4. Service → **Volumes** → **New Volume**, mount path `/data`. Without it, you'd have to scan again after each redeploy.
+5. Once it's deployed, open `https://<your-railway-domain>/qr?key=<QR_PASSWORD>` and scan the QR with WhatsApp (Linked devices). The page then shows **✅ البوت متصل**.
+
+To add or remove a tester, edit `ALLOWED_NUMBERS` in Variables (Railway restarts the bot, and the session is kept).
+Cost: Railway's trial/hobby plan, a few dollars a month for a small bot (check their pricing).
+
+## Run it on a PC (Windows / Mac / Linux)
 You need **Node.js 20 or newer** (<https://nodejs.org>).
 
 ```bash

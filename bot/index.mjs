@@ -7,10 +7,15 @@
 // Env (optional):
 //   API_BASE=https://qra-lia.vercel.app     where /api/read and /api/tts live
 //   ALLOWED_NUMBERS=2126XXXXXXXX,2126YYYYYYYY   testers who can use the bot without the start word
+//   QR_PASSWORD=…        enables the web page /qr?key=… to scan the QR when running on a server
+//   AUTH_DIR=auth        where the login session is kept (a persistent volume on a server)
+//   PORT=3000            web port (set automatically by most hosts)
 import { Boom } from "@hapi/boom";
 import makeWASocket, { DisconnectReason, downloadMediaMessage, useMultiFileAuthState } from "@whiskeysockets/baileys";
 import { Mp3Encoder } from "@breezystack/lamejs";
 import pino from "pino";
+import { createServer } from "node:http";
+import QRCode from "qrcode";
 import qrcode from "qrcode-terminal";
 
 const API_BASE = (process.env.API_BASE || "https://qra-lia.vercel.app").replace(/\/$/, "");
@@ -19,6 +24,11 @@ const START_WORDS = /(qra\s*lia|اقرا\s*ليا|قرا\s*ليا)/i;
 const SESSION_MS = 30 * 60_000; // after the start word, the person can send papers for 30 min
 const MAX_READS = 5; // per person per 10 minutes
 const MAX_IMAGE_BYTES = 3 * 1024 * 1024;
+const AUTH_DIR = process.env.AUTH_DIR || "auth";
+const QR_PASSWORD = process.env.QR_PASSWORD || "";
+
+// Live status for the small web page (needed on a server, where nobody sees the terminal).
+const status = { connected: false, qr: "", since: new Date().toISOString() };
 
 const TEXT = {
   welcome:
@@ -115,15 +125,22 @@ async function readPaper(sock, chat, person, msg) {
 }
 
 async function start() {
-  const { state, saveCreds } = await useMultiFileAuthState("auth"); // ⚠️ login session: never commit or share this folder
+  const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR); // ⚠️ login session: never commit or share this folder
   const sock = makeWASocket({ auth: state, logger: pino({ level: process.env.LOG_LEVEL || "warn" }) });
   sock.ev.on("creds.update", saveCreds);
 
   sock.ev.on("connection.update", ({ connection, lastDisconnect, qr }) => {
     if (qr) {
+      status.qr = qr;
+      status.connected = false;
       console.log("\n📱 WhatsApp → ⋮ → Appareils connectés → Connecter un appareil → scan:\n");
       qrcode.generate(qr, { small: true });
     }
+    if (connection === "open") {
+      status.connected = true;
+      status.qr = "";
+    }
+    if (connection === "close") status.connected = false;
     if (connection === "open") console.log("✅ Qra Lia bot connected. Testers:", ALLOWED.size ? [...ALLOWED].join(", ") : "anyone who sends the start word");
     if (connection === "close") {
       const code = new Boom(lastDisconnect?.error)?.output?.statusCode;
@@ -165,5 +182,26 @@ async function start() {
     }
   });
 }
+
+// Web page: /health for the host, /qr?key=QR_PASSWORD to scan the login QR from a phone or laptop.
+const page = (body) =>
+  `<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="refresh" content="10"><title>Qra Lia bot</title><style>body{font-family:system-ui,sans-serif;background:#f5f7ff;color:#0b1533;display:grid;place-items:center;min-height:100vh;margin:0;text-align:center;padding:16px}main{background:#fff;border-radius:24px;padding:28px;box-shadow:0 10px 30px #1d3fd822;max-width:420px}img{width:280px;height:280px}</style></head><body><main>${body}</main></body></html>`;
+
+createServer(async (req, res) => {
+  const url = new URL(req.url || "/", "http://localhost");
+  if (url.pathname === "/health") {
+    res.writeHead(200, { "Content-Type": "application/json" });
+    return res.end(JSON.stringify({ connected: status.connected }));
+  }
+  if (url.pathname === "/qr" && QR_PASSWORD && url.searchParams.get("key") === QR_PASSWORD) {
+    res.writeHead(200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" });
+    if (status.connected) return res.end(page("<h1>✅ البوت متصل</h1><p>Qra Lia bot is connected.</p>"));
+    if (!status.qr) return res.end(page("<h1>⏳ كنتسناو الـ QR…</h1><p>Waiting for WhatsApp, the page refreshes by itself.</p>"));
+    const img = await QRCode.toDataURL(status.qr, { width: 560, margin: 1 });
+    return res.end(page(`<h1>سكاني بواتساب</h1><p>WhatsApp → ⋮ → Appareils connectés → Connecter un appareil</p><img src="${img}" alt="QR"><p>كيتبدل كل شوية، الصفحة كتجدد راسها.</p>`));
+  }
+  res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+  res.end(page(`<h1>Qra Lia bot</h1><p>${status.connected ? "✅ connected" : "⏳ not connected"}</p>`));
+}).listen(Number(process.env.PORT) || 3000, () => console.log(`🌐 status page on port ${Number(process.env.PORT) || 3000}`));
 
 start();
