@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { Analytics } from "@vercel/analytics/next";
 import { IBM_Plex_Sans_Arabic } from "next/font/google";
 import RegisterSW from "@/components/RegisterSW";
 import { LangProvider } from "@/lib/i18n";
@@ -69,6 +70,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className={`${qraFont.className} min-h-full flex flex-col`}>
         <LangProvider>{children}</LangProvider>
         <RegisterSW />
+        {/* Cookie-less page views (Vercel Web Analytics); no document data is ever sent. */}
+        <Analytics />
       </body>
     </html>
   );
