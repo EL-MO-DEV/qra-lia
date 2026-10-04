@@ -234,10 +234,19 @@ Phone (PWA)                                   Server (Vercel, Next.js)
 3. **Accounts:** Supabase project (EU) · Sentry · domain name (e.g. `qralia.ma`).
 4. **First 10 testers:** who and where.
 
-## 13. What we start now (no account needed)
+## 13. Progress
 
-- [ ] CI: GitHub Actions (lint, typecheck, tests, build)
-- [ ] F8: privacy + terms pages, 👍/👎 feedback
+**Done:**
+- [x] WhatsApp prototype bot, live on Railway (personal number, testers in `ALLOWED_NUMBERS`)
+- [x] Official Cloud API webhook ready (`/api/whatsapp`); needs a Meta app to switch on
+- [x] F7 (WhatsApp version): reminders 2 days before the deadline (text + voice)
+- [x] F5: questions by voice or text about the last paper (`/api/stt`, `/api/ask`)
+- [x] Vercel Web Analytics (cookie-less page views); switch it on in the Vercel dashboard
+
+## 14. Next (no account needed)
+
+- [x] CI: GitHub Actions (lint, typecheck, tests, build)
+- [x] F8: privacy + terms page (`/privacy`) · [ ] 👍/👎 feedback (needs a small database)
 - [ ] F1: smart camera (brightness + blur check, guide frame)
 - [ ] F2 + F3: share to Qra Lia + scam check mode
 - [ ] F9: text size + auto-read + first-run voice tutorial

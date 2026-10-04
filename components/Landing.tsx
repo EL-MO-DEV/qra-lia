@@ -22,6 +22,7 @@ import {
   Zap,
   type LucideIcon,
 } from "lucide-react";
+import Link from "next/link";
 import { useLang, type StringKey } from "@/lib/i18n";
 import type { Lang } from "@/lib/types";
 import InstallPrompt from "./InstallPrompt";
@@ -365,6 +366,11 @@ export default function Landing({ onFileChosen }: LandingProps) {
           <p>{t("footerAi")}</p>
           <p lang="fr" dir="ltr" className="fr">
             L&apos;IA peut se tromper : vérifiez toujours le document original.
+          </p>
+          <p>
+            <Link href="/privacy" style={{ color: "var(--primary-text)", fontWeight: 600 }}>
+              الخصوصية والشروط · Confidentialité
+            </Link>
           </p>
         </div>
       </footer>

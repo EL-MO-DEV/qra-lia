@@ -1,0 +1,46 @@
+.legal h2 {
+  margin: 26px 0 8px;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.legal ul {
+  margin: 0;
+  padding-inline-start: 22px;
+  display: grid;
+  gap: 8px;
+  font-size: 18px;
+}
+
+.legal p {
+  font-size: 17px;
+}
+
+.back {
+  margin-bottom: 12px;
+}
+
+.back a {
+  color: var(--primary-text);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.note {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 15px !important;
+}
+
+.other {
+  margin-top: 28px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  text-align: left;
+}
+
+.other ul,
+.other p {
+  font-size: 16px;
+}
