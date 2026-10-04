@@ -1,14 +1,14 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
-  <!-- Qra Lia app icon: a paper that talks to you. Majorelle blue, zellige, 3D paper + marigold speech bubble. -->
+  <!-- Qra Lia app icon: a paper that talks to you. WhatsApp-like green, 3D paper + marigold speech bubble. -->
   <defs>
     <radialGradient id="bg" cx="0.34" cy="0.24" r="0.95">
-      <stop offset="0" stop-color="#4A6BFF"/>
-      <stop offset="0.45" stop-color="#1D3FD8"/>
-      <stop offset="1" stop-color="#0C1F86"/>
+      <stop offset="0" stop-color="#2BC79C"/>
+      <stop offset="0.45" stop-color="#008069"/>
+      <stop offset="1" stop-color="#005246"/>
     </radialGradient>
     <radialGradient id="vignette" cx="0.5" cy="0.5" r="0.72">
       <stop offset="0.6" stop-color="#000" stop-opacity="0"/>
-      <stop offset="1" stop-color="#020A3A" stop-opacity="0.45"/>
+      <stop offset="1" stop-color="#00261D" stop-opacity="0.45"/>
     </radialGradient>
     <linearGradient id="sheen" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0" stop-color="#fff" stop-opacity="0.22"/>
@@ -65,28 +65,27 @@
 
   <!-- Background -->
   <rect width="1024" height="1024" fill="url(#bg)"/>
-  <rect width="1024" height="1024" fill="url(#zellige)" mask="url(#patternMask)"/>
   <rect width="1024" height="1024" fill="url(#vignette)"/>
   <rect width="1024" height="560" fill="url(#sheen)"/>
 
   <g transform="translate(512 512) scale(0.93) translate(-555 -535)">
     <!-- Back sheet (a small stack of papers) -->
     <g transform="translate(34 -6) rotate(6 480 475)">
-      <use href="#paperShape" transform="translate(16 30)" fill="#030C4A" opacity="0.4" filter="url(#softShadow)"/>
+      <use href="#paperShape" transform="translate(16 30)" fill="#00241B" opacity="0.4" filter="url(#softShadow)"/>
       <use href="#paperShape" fill="#D9E0F4"/>
       <use href="#paperShape" fill="none" stroke="#FFFFFF" stroke-opacity="0.7" stroke-width="2"/>
     </g>
     <!-- Paper -->
     <g transform="rotate(-7 480 475)">
-      <use href="#paperShape" transform="translate(26 44)" fill="#030C4A" opacity="0.5" filter="url(#softShadow)"/>
-      <use href="#paperShape" transform="translate(6 10)" fill="#030C4A" opacity="0.35" filter="url(#tightShadow)"/>
+      <use href="#paperShape" transform="translate(26 44)" fill="#00241B" opacity="0.5" filter="url(#softShadow)"/>
+      <use href="#paperShape" transform="translate(6 10)" fill="#00241B" opacity="0.35" filter="url(#tightShadow)"/>
       <use href="#paperShape" fill="url(#paper)"/>
       <use href="#paperShape" fill="none" stroke="#FFFFFF" stroke-opacity="0.9" stroke-width="2"/>
       <!-- folded corner -->
       <path d="M570 230 L660 320 H594 Q570 320 570 296 Z" fill="#0A1B6E" opacity="0.18" filter="url(#tightShadow)"/>
       <path d="M570 230 L660 320 H594 Q570 320 570 296 Z" fill="url(#fold)"/>
       <!-- printed content -->
-      <rect x="340" y="276" width="150" height="28" rx="14" fill="#1D3FD8" opacity="0.9"/>
+      <rect x="340" y="276" width="150" height="28" rx="14" fill="#008069" opacity="0.9"/>
       <rect x="340" y="350" width="270" height="16" rx="8" fill="#C5CDE3"/>
       <rect x="340" y="388" width="230" height="16" rx="8" fill="#C5CDE3"/>
       <rect x="340" y="426" width="255" height="16" rx="8" fill="#C5CDE3"/>
@@ -94,11 +93,11 @@
       <rect x="360" y="498" width="96" height="16" rx="8" fill="#E39A00"/>
       <rect x="340" y="572" width="240" height="16" rx="8" fill="#C5CDE3"/>
       <rect x="340" y="610" width="170" height="16" rx="8" fill="#C5CDE3"/>
-      <circle cx="600" cy="652" r="30" fill="none" stroke="#1D3FD8" stroke-opacity="0.35" stroke-width="5"/>
+      <circle cx="600" cy="652" r="30" fill="none" stroke="#008069" stroke-opacity="0.35" stroke-width="5"/>
     </g>
 
     <!-- Speech bubble -->
-    <use href="#bubbleShape" transform="translate(18 34)" fill="#020A45" opacity="0.55" filter="url(#softShadow)"/>
+    <use href="#bubbleShape" transform="translate(18 34)" fill="#002A20" opacity="0.55" filter="url(#softShadow)"/>
     <use href="#bubbleShape" transform="translate(4 10)" fill="#6B3A00" opacity="0.35" filter="url(#tightShadow)"/>
     <use href="#bubbleShape" fill="url(#bubble)"/>
     <use href="#bubbleShape" fill="none" stroke="#FFF1C2" stroke-opacity="0.7" stroke-width="3"/>
