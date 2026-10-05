@@ -36,8 +36,9 @@ const YES = /^(ايه|اييه|اه|آه|نعم|واخا|وخا|ok|okay|oui|yes|
 const NO = /^(لا|لالا|no|non|la|lla|👎)(?=[\s!.,؟?]|$)/iu;
 const STOP = /(لغي|حبس|وقف التذكير|stop)/i;
 const WHERE = /(وريني|ورّيني|فين مكتوب|werr?ini|warini|wrini)|^\s*(فين|fin)\s*[؟?]?\s*$/i;
-const MEDS_WORDS = /(دوا|دواء|وصفة|ordonnance|m[ée]dicament|\bdwa\b)/i;
-const MEDICAL_DOC = /(وصفة|دوا|دواء|ordonnance|prescription|m[ée]dicament|pharmac|صيدل)/i;
+// Whole words only: "دوا" must not match دوار، الدوام، دواير…
+const MEDS_WORDS = /(?<!\p{L})(?:ال)?(?:دوا|دواء|ادوية|أدوية|وصفة)(?!\p{L})|\b(?:ordonnance|m[ée]dicaments?|dwa)\b/iu;
+const MEDICAL_DOC = /(?<!\p{L})(?:ال)?(?:دوا|دواء|ادوية|أدوية|وصفة)(?!\p{L})|صيدل|\b(?:ordonnance|prescription|m[ée]dicaments?|pharmac\w*)\b/iu;
 const SLOT_INFO = {
   morning: { label: "الصباح", emoji: "🌅", h: 8 },
   noon: { label: "الغدا", emoji: "☀️", h: 13 },
@@ -88,6 +89,21 @@ function formatResult(r) {
 function formatDate(iso) {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || "");
   return m ? `${Number(m[3])} ${MONTHS[Number(m[2]) - 1]} ${m[1]}` : iso;
+}
+
+// Morocco is UTC+1 most of the year but UTC+0 during Ramadan: always go through the real time zone.
+const CASA = new Intl.DateTimeFormat("en-US", {
+  timeZone: "Africa/Casablanca", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23",
+});
+function casaParts(ts) {
+  const p = Object.fromEntries(CASA.formatToParts(new Date(ts)).map((x) => [x.type, x.value]));
+  return { y: Number(p.year), m: Number(p.month) - 1, d: Number(p.day), h: Number(p.hour), min: Number(p.minute) };
+}
+/** Timestamp of a Morocco wall-clock time (day overflow allowed, like Date.UTC). */
+function casaTime(y, m, d, h, min = 0) {
+  const guess = Date.UTC(y, m, d, h, min);
+  const p = casaParts(guess);
+  return guess - (Date.UTC(p.y, p.m, p.d, p.h, p.min) - guess);
 }
 
 async function loadReminders() {
@@ -167,7 +183,14 @@ async function readPaper(sock, chat, person, msg) {
 
   if (r.status !== "ok") return sock.sendMessage(chat, { text: `📸 ${r.darija_summary}` }, { quoted: msg });
   // A prescription / medicine box: the medicine schedule is far more useful than a "paper" explanation.
-  if (MEDICAL_DOC.test(`${r.doc_type || ""} ${r.sender || ""}`) && (await readMedsFlow(sock, chat, person, msg, image))) return;
+  if (MEDICAL_DOC.test(`${r.doc_type || ""} ${r.sender || ""}`)) {
+    try {
+      if (await readMedsFlow(sock, chat, person, msg, image)) return;
+    } catch (e) {
+      // Medicine reader unavailable: fall back to the explanation we already have.
+      console.warn("meds fallback:", e?.message?.slice(0, 120));
+    }
+  }
   await sock.sendMessage(chat, { text: formatResult(r) }, { quoted: msg });
 
   // The photo stays in memory only, for 30 min, so "وريني" can show where things are written.
@@ -192,7 +215,7 @@ async function readPaper(sock, chat, person, msg) {
 
 async function addReminder(sock, chat, person, r) {
   const [y, m, d] = r.deadline.split("-").map(Number);
-  const at = Math.max(Date.UTC(y, m - 1, d - 2, 9, 0), Date.now() + 60_000); // 10:00 Morocco time
+  const at = Math.max(casaTime(y, m - 1, d - 2, 10), Date.now() + 60_000); // 10:00 Morocco time
   const amount = r.amount ? `${r.amount.value} درهم` : "";
   const what = [r.doc_type, r.sender].filter(Boolean).join(" — ");
   const text = ["⏰ *تذكير من Qra Lia*", what && `📄 ${what}`, amount && `💰 ${amount}`, `📅 الأجل: ${formatDate(r.deadline)}`, r.action && `✅ ${r.action}`]
@@ -201,9 +224,9 @@ async function addReminder(sock, chat, person, r) {
   const spoken = `تذكير من اقرا ليا. ${what}. ${amount ? `خاصك تخلّص ${amount}. ` : ""}الأجل هو ${formatDate(r.deadline)}. ${r.action || ""}`;
   reminders.push({ id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, chat, at, text, spoken });
   await saveReminders();
-  const when = new Date(at);
+  const when = casaParts(at);
   await sock.sendMessage(chat, {
-    text: `✅ واخا! غادي نفكرك نهار ${when.getUTCDate()} ${MONTHS[when.getUTCMonth()]} فالصباح.\nإلا بغيتي تلغي التذكير كتب *لغي*.`,
+    text: `✅ واخا! غادي نفكرك نهار ${when.d} ${MONTHS[when.m]} فالصباح.\nإلا بغيتي تلغي التذكير كتب *لغي*.`,
   });
 }
 
@@ -302,11 +325,10 @@ async function readMedsFlow(sock, chat, person, msg, image) {
   return true;
 }
 
-/** Daily reminders at each medicine time (Morocco time, UTC+1), for the written duration (default 7, max 30 days). */
+/** Daily reminders at each medicine time (Morocco wall-clock time), for the written duration (default 7, max 30 days). */
 async function addMedReminders(sock, chat, m) {
   const now = Date.now();
-  const local = new Date(now + 60 * 60_000); // Morocco = UTC+1
-  const [y, mo, d] = [local.getUTCFullYear(), local.getUTCMonth(), local.getUTCDate()];
+  const { y, m: mo, d } = casaParts(now); // today in Morocco
   const summary = [];
   for (const [slot, info] of Object.entries(SLOT_INFO)) {
     const meds = m.medicines.filter((x) => x.slots.includes(slot));
@@ -321,7 +343,7 @@ async function addMedReminders(sock, chat, m) {
     const spoken = `وقت الدوا ديال ${info.label}. ${meds.map((x) => [x.dose, x.name].filter(Boolean).join(" ")).join("، و ")}.`;
     let added = 0;
     for (let i = 0; added < days && i < days + 1; i++) {
-      const at = Date.UTC(y, mo, d + i, info.h - 1, 0);
+      const at = casaTime(y, mo, d + i, info.h);
       if (at <= now + 60_000) continue;
       reminders.push({ id: `${slot}-${at}-${Math.random().toString(36).slice(2, 7)}`, chat, at, text, spoken });
       added++;

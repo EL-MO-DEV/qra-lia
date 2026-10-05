@@ -10,7 +10,7 @@ const nullableText = z
   .transform((s) => (s && s.trim() ? s.trim().slice(0, 160) : null));
 
 const MedicineSchema = z.object({
-  name: z.string().trim().min(1).max(120),
+  name: z.string().trim().min(1).transform((n) => n.slice(0, 120)),
   dose: nullableText, // exactly as written, e.g. "1 comprimé", "5 ml"
   slots: z
     .array(z.string())
@@ -24,7 +24,16 @@ const MedicineSchema = z.object({
 export const MedsSchema = z.object({
   status: z.enum(["ok", "unreadable", "not_medical"]),
   kind: z.enum(["prescription", "medicine_box", "leaflet", "other"]).catch("other"),
-  medicines: z.array(MedicineSchema).max(15).catch([]),
+  // One bad entry must not wipe out the others: keep every medicine that validates (max 15).
+  medicines: z
+    .array(z.unknown())
+    .catch([])
+    .transform((items) =>
+      items
+        .map((x) => MedicineSchema.safeParse(x))
+        .flatMap((r) => (r.success ? [r.data] : []))
+        .slice(0, 15),
+    ),
   warnings: z.array(z.string()).max(5).catch([]).transform((w) => w.map((s) => s.trim()).filter(Boolean)),
   confidence: z.number().nullish().transform((c) => Math.min(1, Math.max(0, c ?? 0))),
   summary: z.string().trim().min(1).max(1500),

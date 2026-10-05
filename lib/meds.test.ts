@@ -39,3 +39,14 @@ test("calendar: one daily event per time slot, count = longest written duration,
   assert.match(ics, /RRULE:FREQ=DAILY;COUNT=7/);
   assert.ok(ics.includes("\r\n"));
 });
+
+test("one bad medicine entry doesn't drop the good ones; long names are shortened", () => {
+  const raw = JSON.stringify({
+    status: "ok", kind: "prescription", confidence: 0.8, summary: "x", warnings: [],
+    medicines: [{ name: "", dose: "1" }, { name: "A".repeat(200), slots: ["morning"] }, { name: "Spasfon", slots: [] }],
+  });
+  const m = parseMeds(raw);
+  assert.equal(m.medicines.length, 2);
+  assert.equal(m.medicines[0].name.length, 120);
+  assert.equal(m.medicines[1].name, "Spasfon");
+});
