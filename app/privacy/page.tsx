@@ -25,6 +25,7 @@ export default function PrivacyPage() {
         <ul>
           <li>كنصيفطو التصويرة للذكاء الاصطناعي (Google Gemini، ولا Groq إلا ما خدمش) باش يقراها ويشرحها. ما كنحفظوهاش عندنا.</li>
           <li>الڤوكال والأسئلة ديالك كيتصيفطو بنفس الطريقة باش نفهموهم ونجاوبوك، وما كيتحفظوش.</li>
+          <li>فواتساب، التصويرة كتبقى غير فالذاكرة 30 دقيقة باش نقدرو نوريوك فين مكتوب المبلغ والأجل (كتب «وريني»)، ومن بعد كتمسح.</li>
           <li>أرقام البطاقة الوطنية، RIB والكارط كنخبيوهم فالجواب.</li>
           <li>فالتطبيق ما كاين لا حساب لا تسجيل. اللوغ ديالنا فيه غير معلومات تقنية (واش القراية نجحات)، ماشي الكلام اللي فالورقة.</li>
         </ul>
@@ -49,6 +50,10 @@ export default function PrivacyPage() {
           <li>
             <strong>Photos, messages vocaux et questions</strong> sont transmis à des fournisseurs d&apos;IA (Google Gemini, Groq) uniquement
             pour lire le document, transcrire la voix et répondre. Qra Lia ne les conserve pas.
+          </li>
+          <li>
+            Sur WhatsApp, la photo reste uniquement en mémoire pendant 30 minutes pour pouvoir montrer où sont écrits le montant et
+            la date (« وريني »), puis elle est effacée.
           </li>
           <li>Les numéros de CIN, RIB/IBAN et de carte sont masqués dans les réponses.</li>
           <li>Aucun compte. Les journaux techniques ne contiennent ni le contenu des documents ni les questions.</li>

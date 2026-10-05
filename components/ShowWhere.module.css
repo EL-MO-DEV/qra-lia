@@ -1,0 +1,121 @@
+.wrap {
+  display: grid;
+  gap: 10px;
+}
+
+.figure {
+  margin: 0;
+  padding: 14px;
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+  animation: rise 0.35s ease both;
+}
+
+.title {
+  font-size: 17px;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+
+.frame {
+  position: relative;
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--surface-2);
+}
+
+.photo {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: none;
+}
+
+/* One colour per field, never colour alone: each box also carries an icon tag + the legend. */
+.amount {
+  --hl: #008069;
+}
+
+.deadline {
+  --hl: #e8900c;
+}
+
+.sender {
+  --hl: #2f6fdb;
+}
+
+.box {
+  position: absolute;
+  border: 3px solid var(--hl);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--hl) 14%, transparent);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.85);
+  animation: glow 1.6s ease-in-out 2;
+}
+
+.tag {
+  position: absolute;
+  top: 50%;
+  translate: 0 -50%;
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--hl);
+  color: #fff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+}
+
+.tagBefore {
+  right: calc(100% + 6px);
+}
+
+.tagAfter {
+  left: calc(100% + 6px);
+}
+
+.legend {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+  font-size: 18px;
+}
+
+.legend li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.dot {
+  width: 30px;
+  height: 30px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  background: var(--hl);
+  color: #fff;
+}
+
+@keyframes glow {
+  50% {
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.85), 0 0 0 9px color-mix(in srgb, var(--hl) 35%, transparent);
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
