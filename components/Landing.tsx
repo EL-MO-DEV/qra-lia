@@ -12,6 +12,7 @@ import {
   ListChecks,
   LockKeyhole,
   MessageSquareText,
+  Pill,
   ScanSearch,
   Send,
   ShieldAlert,
@@ -183,6 +184,20 @@ export default function Landing({ onFileChosen }: LandingProps) {
             <div className="hero-card">
               <UploadPanel onFileChosen={onFileChosen} />
             </div>
+
+            {/* 💊 Second entry: medicines and prescriptions */}
+            <Link href="/dwa" className="feature-btn" style={{ marginTop: 14, textDecoration: "none" }}>
+              <span className="feature-btn-icon" aria-hidden="true">
+                <Pill size={24} strokeWidth={2.3} />
+              </span>
+              <span className="feature-btn-text">
+                <span className="feature-btn-label">{t("medsEntry")}</span>
+                <span className="feature-btn-sub" style={{ direction: "inherit" }}>
+                  {t("medsEntrySub")}
+                </span>
+              </span>
+              <ArrowLeft size={22} strokeWidth={2.6} aria-hidden="true" className="flip-ltr" style={{ marginInlineStart: "auto", color: "var(--primary-text)" }} />
+            </Link>
 
             <div className="hero-listen">
               <ListenButton text={PAGE_NARRATION[lang]} label={t("listenIntro")} sub="Écouter la présentation" />

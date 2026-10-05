@@ -1,0 +1,197 @@
+.meds {
+  gap: 16px;
+}
+
+.morning {
+  --slot: #e8900c;
+}
+.noon {
+  --slot: #d97706;
+}
+.evening {
+  --slot: #7c3aed;
+}
+.night {
+  --slot: #2f6fdb;
+}
+
+.safety p {
+  font-size: 17px;
+}
+
+.unsure {
+  display: block;
+  margin-top: 6px;
+}
+
+.day h2 {
+  margin: 0 0 10px;
+}
+
+.timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+
+.timeline > li {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 12px;
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--slot) 9%, var(--surface));
+  border-inline-start: 5px solid var(--slot);
+}
+
+.slotIcon {
+  width: 46px;
+  height: 46px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  background: var(--slot);
+  color: #fff;
+}
+
+.slotBody {
+  min-width: 0;
+}
+
+.slotName {
+  font-size: 21px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.slotTime {
+  direction: ltr;
+  unicode-bidi: isolate;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--muted);
+  margin-inline-start: 6px;
+}
+
+.pills {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+  font-size: 17px;
+}
+
+.pills li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pills li svg {
+  color: var(--slot);
+}
+
+.pillText {
+  unicode-bidi: isolate;
+}
+
+.list {
+  display: grid;
+  gap: 10px;
+}
+
+.listTitle {
+  font-size: 20px;
+  font-weight: 700;
+  margin: 6px 0 0;
+}
+
+.med {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.num {
+  width: 40px;
+  height: 40px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--primary);
+  color: var(--on-primary);
+  font-weight: 700;
+  font-size: 19px;
+}
+
+.medBody {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Names and doses are written in French: keep them left-to-right, but aligned with the Arabic page */
+:global(html[dir="rtl"]) .medName,
+:global(html[dir="rtl"]) .medDose,
+:global(html[dir="rtl"]) .note {
+  text-align: right;
+}
+
+.medName {
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.medDose {
+  font-size: 18px;
+  color: var(--muted);
+}
+
+.facts {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.facts li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 16px;
+  font-weight: 600;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+}
+
+.facts li.morning,
+.facts li.noon,
+.facts li.evening,
+.facts li.night {
+  background: color-mix(in srgb, var(--slot) 14%, var(--surface));
+  border-color: color-mix(in srgb, var(--slot) 40%, transparent);
+}
+
+.facts li svg {
+  color: var(--slot, var(--primary-text));
+}
+
+.ifNeeded {
+  background: var(--medium-bg) !important;
+  color: var(--medium-fg);
+}
+
+.note {
+  margin-top: 8px;
+  font-size: 16px;
+  color: var(--muted);
+}

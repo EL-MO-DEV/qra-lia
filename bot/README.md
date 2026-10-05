@@ -12,6 +12,9 @@ A bot on **your own WhatsApp number**: when someone sends a photo of a paper, it
 - **Questions** for 30 min after a paper: send a **voice note** or a text ("can I pay at the bank?") → answer in text + voice (`/api/stt` + `/api/ask`, answers only from that paper's data).
 - **Reminders:** when the paper has a deadline ≥ 2 days away, the bot asks "⏰ remind you?". Answer *ايه* → 2 days before, at 10:00, it sends a reminder (text + voice). *لغي* cancels. Reminders live in `qra-reminders.json` next to the session (on the volume) and are deleted once sent.
 
+- **Medicines:** write *دوا* then send a photo of the prescription or the medicine box (prescriptions sent as normal papers are detected too) → each medicine, the day by time (morning / noon / evening / bedtime), voice note, and an offer of **daily reminders at each medicine time** (written duration, default 7 days, max 30). Only what is written is copied; nothing is invented.
+- **وريني:** after a bill or letter, the photo comes back with coloured boxes on the amount, the deadline and the sender.
+
 ## Who gets an answer
 It's your personal number, so the bot **doesn't answer your friends' normal messages**. It answers only:
 - testers listed in `ALLOWED_NUMBERS`, when they send a photo;
