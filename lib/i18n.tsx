@@ -131,6 +131,32 @@ const STRINGS = {
   fieldDeadline: { ar: "الأجل", en: "Deadline" },
   fieldSender: { ar: "شكون صيفطها", en: "Sender" },
 
+  // medicines (/dwa)
+  medsEntry: { ar: "عندك دوا ولا ورقة ديال الطبيب؟", en: "Got medicines or a doctor's prescription?" },
+  medsEntrySub: { ar: "صوّرها ونقولو ليك شنو تاخد وفوقاش", en: "Take a photo: we tell you what to take and when" },
+  medsTitle: { ar: "فهم الدوا ديالك", en: "Understand your medicines" },
+  medsIntro: {
+    ar: "صوّر الورقة ديال الطبيب (الوصفة) ولا العلبة ديال الدوا، ونقولو ليك شنو تاخد، شحال، وفوقاش.",
+    en: "Photograph the doctor's prescription or the medicine box: we tell you what to take, how much and when.",
+  },
+  medsReading: { ar: "كنقرا الدوا…", en: "Reading your medicines…" },
+  medsListen: { ar: "سمع شنو خاصك تاخد", en: "Listen: what to take" },
+  medsSafety: {
+    ar: "هادشي غير اللي مكتوب فالورقة. ما تبدلش الدوا وما توقفوش بلا ما تسول الطبيب ولا الصيدلي.",
+    en: "This is only what is written on the paper. Never change or stop a medicine without asking your doctor or pharmacist.",
+  },
+  medsUnsure: { ar: "ما متأكدينش مزيان من هاد القراية: وري الورقة للصيدلي.", en: "We're not fully sure about this reading: show the paper to a pharmacist." },
+  medsDay: { ar: "النهار ديالك", en: "Your day" },
+  medsList: { ar: "الدوا واحد بواحد", en: "Each medicine" },
+  medsIfNeeded: { ar: "غير إلا احتاجيتي", en: "Only if needed" },
+  medsRemind: { ar: "فكّرني فوقت كل دوا", en: "Remind me at each medicine time" },
+  medsReminded: { ar: "تزادو التذكيرات فالكاليندري ديالك", en: "Reminders added to your calendar" },
+  medsShare: { ar: "صيفط الدوا لشي حد من العائلة", en: "Send to a family member" },
+  medsAgain: { ar: "صوّر دوا آخر", en: "Photograph another medicine" },
+  medsNotMedical: { ar: "هادي ما باناتش وصفة ولا دوا. صوّر الورقة ديال الطبيب ولا العلبة ديال الدوا.", en: "This doesn't look like a prescription or a medicine. Photograph the doctor's paper or the medicine box." },
+  medsWarnings: { ar: "مكتوب فالورقة", en: "Written on the paper" },
+  back: { ar: "رجوع", en: "Back" },
+
   // errors
   errUnreadable: { ar: "الصورة ما واضحاش. عاود صوّر فضو مزيان وبلا ما تحرك التيليفون.", en: "The photo isn't clear. Take it again in good light, holding the phone still." },
   errNotDoc: { ar: "هادي ما باناتش ورقة. صوّر الورقة كاملة من الفوق.", en: "This doesn't look like a paper. Photograph the whole page from above." },

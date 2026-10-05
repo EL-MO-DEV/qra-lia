@@ -33,6 +33,7 @@ export default function PrivacyPage() {
         <h2>التذكير فواتساب</h2>
         <ul>
           <li>إلا قبلتي التذكير، كنحفظو غير النمرة ديالك، التاريخ، وجملة قصيرة على الورقة، حتى نصيفطو التذكير، ومن بعد كيتمسحو.</li>
+          <li>تذكيرات الدوا كتحفظ سمية الدوا، شحال، والوقت، حتى كيتصيفط التذكير، ومن بعد كيتمسحو. هادي معلومات صحية، دابا ما كنحفظو والو آخر.</li>
           <li>كتب «لغي» فواتساب باش تمسح التذكيرات ديالك فأي وقت.</li>
         </ul>
 
@@ -68,6 +69,11 @@ export default function PrivacyPage() {
           <li>
             Qra Lia fournit une aide à la compréhension, pas un conseil juridique ou financier. L&apos;IA peut se tromper : vérifiez
             toujours le document original et auprès de l&apos;émetteur.
+          </li>
+          <li>
+            <strong>Médicaments</strong> : Qra Lia recopie uniquement ce qui est écrit sur l&apos;ordonnance ou la boîte et ne donne aucun avis
+            médical. Les rappels de prise conservent le nom du médicament, la dose et l&apos;heure jusqu&apos;à l&apos;envoi, puis sont supprimés
+            (données de santé).
           </li>
           <li>Conformément à la loi 09-08, vous pouvez demander l&apos;accès ou la suppression de vos données (rappels) via WhatsApp.</li>
         </ul>
