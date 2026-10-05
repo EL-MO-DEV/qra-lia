@@ -19,6 +19,7 @@ import { readFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
 import QRCode from "qrcode";
 import qrcode from "qrcode-terminal";
+import sharp from "sharp";
 
 const API_BASE = (process.env.API_BASE || "https://qra-lia.vercel.app").replace(/\/$/, "");
 const ALLOWED = new Set((process.env.ALLOWED_NUMBERS || "").split(",").map((n) => n.replace(/\D/g, "")).filter(Boolean));
@@ -34,13 +35,15 @@ const CONVERSATION_MS = 30 * 60_000; // questions about the last paper are accep
 const YES = /^(ايه|اييه|اه|آه|نعم|واخا|وخا|ok|okay|oui|yes|wah|iyeh|ah|eh|👍)(?=[\s!.,؟?]|$)/iu;
 const NO = /^(لا|لالا|no|non|la|lla|👎)(?=[\s!.,؟?]|$)/iu;
 const STOP = /(لغي|حبس|وقف التذكير|stop)/i;
+const WHERE = /(وريني|ورّيني|فين مكتوب|werr?ini|warini|wrini)|^\s*(فين|fin)\s*[؟?]?\s*$/i;
+const BOX_COLORS = { amount: "#00A884", deadline: "#F5A524", sender: "#3B82F6" };
 
 // Live status for the small web page (needed on a server, where nobody sees the terminal).
 const status = { connected: false, qr: "", since: new Date().toISOString() };
 
 const TEXT = {
   welcome:
-    "مرحبا بيك فـ Qra Lia 👋\nصيفط ليا *تصويرة ديال الورقة* (فاتورة، رسالة ديال البنكة، CNSS، الإدارة، ولا SMS مشكوك فيه) ونشرحها ليك بالدارجة، بالكتابة وبالصوت.\n🎤 من بعد تقدر تسولني على الورقة بڤوكال ولا بالكتابة.\n⏰ ونقدر نفكرك قبل الأجل.\n\n🔒 التصويرة ما كتحفظش: qra-lia.vercel.app/privacy\n🧪 هادي نسخة تجريبية.",
+    "مرحبا بيك فـ Qra Lia 👋\nصيفط ليا *تصويرة ديال الورقة* (فاتورة، رسالة ديال البنكة، CNSS، الإدارة، ولا SMS مشكوك فيه) ونشرحها ليك بالدارجة، بالكتابة وبالصوت.\n🎤 من بعد تقدر تسولني على الورقة بڤوكال ولا بالكتابة.\n📍 ونوريك فين مكتوب المبلغ والأجل فالتصويرة.\n⏰ ونقدر نفكرك قبل الأجل.\n\n🔒 التصويرة ما كتحفظش: qra-lia.vercel.app/privacy\n🧪 هادي نسخة تجريبية.",
   reading: "⏳ كنقرا الورقة… شي ثواني.",
   tooBig: "التصويرة كبيرة بزاف، صيفطها عادية 📸",
   tooMany: "بزاف ديال الأوراق دابا 🙏 تسنى شي دقايق وعاود.",
@@ -153,7 +156,8 @@ async function readPaper(sock, chat, person, msg) {
   if (r.status !== "ok") return sock.sendMessage(chat, { text: `📸 ${r.darija_summary}` }, { quoted: msg });
   await sock.sendMessage(chat, { text: formatResult(r) }, { quoted: msg });
 
-  lastPaper.set(person, { result: r, until: Date.now() + CONVERSATION_MS });
+  // The photo stays in memory only, for 30 min, so "وريني" can show where things are written.
+  lastPaper.set(person, { result: r, image, until: Date.now() + CONVERSATION_MS });
 
   // Voice note (best effort: the text already arrived)
   await sock.sendPresenceUpdate("recording", chat);
@@ -164,6 +168,7 @@ async function readPaper(sock, chat, person, msg) {
 
   // Offer a reminder when there is a deadline at least 2 days away.
   const next = ["🎤 عندك سؤال على هاد الورقة؟ صيفط ليا ڤوكال ولا كتب."];
+  if (r.amount || r.deadline || r.sender) next.unshift("📍 كتب *وريني* باش نوريك فين مكتوب المبلغ والأجل فالورقة ديالك.");
   if (r.deadline && typeof r.days_left === "number" && r.days_left >= 2 && !r.scam_suspected) {
     reminderOffers.set(person, { chat, result: r, until: Date.now() + CONVERSATION_MS });
     next.unshift(`⏰ بغيتي نفكرك يوماين قبل ${formatDate(r.deadline)}؟ جاوب *ايه* ولا *لا*.`);
@@ -205,6 +210,64 @@ async function sendDueReminders() {
   }
   reminders = reminders.filter((x) => !due.includes(x));
   await saveReminders();
+}
+
+/** "وريني": draw coloured boxes on the user's own photo where the amount, deadline and sender are printed. */
+async function showWhere(sock, chat, person, msg) {
+  const paper = lastPaper.get(person);
+  if (!paper || paper.until < Date.now() || !paper.image) return false;
+  const r = paper.result;
+  const targets = {
+    ...(r.amount ? { amount: `${r.amount.value} ${r.amount.currency}` } : {}),
+    ...(r.deadline ? { deadline: r.deadline } : {}),
+    ...(r.sender ? { sender: r.sender } : {}),
+  };
+  if (!Object.keys(targets).length) {
+    await sock.sendMessage(chat, { text: "هاد الورقة ما فيهاش مبلغ ولا أجل باش نوريك فين." });
+    return true;
+  }
+  await sock.sendPresenceUpdate("composing", chat);
+  // Same pixels for the AI and for the drawing (EXIF rotation applied once).
+  const { data: photo, info } = await sharp(paper.image).rotate().jpeg({ quality: 85 }).toBuffer({ resolveWithObject: true });
+  const res = await fetch(`${API_BASE}/api/locate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    signal: AbortSignal.timeout(40_000),
+    body: JSON.stringify({ imageBase64: photo.toString("base64"), mimeType: "image/jpeg", width: info.width, height: info.height, targets }),
+  });
+  if (!res.ok) throw new Error(`locate http ${res.status}`);
+  const { boxes } = await res.json();
+  console.log(new Date().toISOString(), "located", boxes.map((b) => b.field).join(","));
+  if (!boxes.length) {
+    await sock.sendMessage(chat, { text: "ما لقيتش فين مكتوب بالضبط 🙏 شوف الورقة الأصلية ولا سول شي حد تيق فيه." });
+    return true;
+  }
+  const { width: W, height: H } = info;
+  const stroke = Math.max(4, Math.round(Math.min(W, H) / 120));
+  const pad = stroke * 2;
+  const rects = boxes
+    .map((b) => {
+      const x = Math.max(0, b.x * W - pad);
+      const y = Math.max(0, b.y * H - pad);
+      const w = Math.min(W - x, b.w * W + pad * 2);
+      const h = Math.min(H - y, b.h * H + pad * 2);
+      const c = BOX_COLORS[b.field] || "#00A884";
+      return `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${stroke * 2}" fill="${c}" fill-opacity="0.15" stroke="#fff" stroke-width="${stroke * 2.6}"/>` +
+        `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${stroke * 2}" fill="none" stroke="${c}" stroke-width="${stroke}"/>`;
+    })
+    .join("");
+  const overlay = Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">${rects}</svg>`);
+  const drawn = await sharp(photo).composite([{ input: overlay }]).jpeg({ quality: 85 }).toBuffer();
+  const amount = r.amount ? `${r.amount.value} درهم` : "";
+  const legend = {
+    amount: `🟩 المبلغ: ${amount}`,
+    deadline: `🟧 الأجل: ${formatDate(r.deadline)}`,
+    sender: `🟦 شكون صيفطها: ${r.sender || ""}`,
+  };
+  const caption = ["📍 *هاهوما فين مكتوبين فالورقة ديالك:*", ...boxes.map((b) => legend[b.field])].join("\n");
+  await sock.sendMessage(chat, { image: drawn, caption }, { quoted: msg });
+  paper.until = Date.now() + CONVERSATION_MS;
+  return true;
 }
 
 async function answer(sock, chat, person, question, msg) {
@@ -296,6 +359,11 @@ async function start() {
           reminders = reminders.filter((x) => x.chat !== chat);
           if (before !== reminders.length) await saveReminders();
           await sock.sendMessage(chat, { text: before !== reminders.length ? "✅ تلغاو التذكيرات ديالك." : "ما عندك حتى تذكير." });
+          continue;
+        }
+        // "وريني": show where the amount / deadline / sender are written on the photo
+        if (text && !isImage && WHERE.test(text.trim()) && (tester || inSession) && lastPaper.get(person)?.until > Date.now()) {
+          await showWhere(sock, chat, person, msg);
           continue;
         }
         // Question about the last paper, by voice note or text

@@ -23,6 +23,7 @@ import SafetyNote from "./SafetyNote";
 import ListenButton from "./ListenButton";
 import ReminderButton from "./ReminderButton";
 import ShareButton from "./ShareButton";
+import ShowWhere from "./ShowWhere";
 
 type ResultCardProps = {
   result: ReadResult;
@@ -159,6 +160,9 @@ export default function ResultCard({ result, onRetake, previewUrl }: ResultCardP
           )}
         </div>
       )}
+
+      {/* 3b. Show me where it's written on the photo (trust: check with your own eyes) */}
+      {previewUrl && <ShowWhere result={result} previewUrl={previewUrl} />}
 
       {/* 4. What to do */}
       {result.action && (

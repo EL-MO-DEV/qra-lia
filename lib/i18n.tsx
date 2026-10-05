@@ -120,6 +120,17 @@ const STRINGS = {
   remind: { ar: "فكّرني قبل الأجل", en: "Remind me before the deadline" },
   reminded: { ar: "تزاد التذكير فالكاليندري ديالك", en: "Reminder added to your calendar" },
 
+  // show me where
+  showWhere: { ar: "وريني فين مكتوب", en: "Show me where it's written" },
+  showWhereHide: { ar: "خبي التصويرة", en: "Hide the photo" },
+  showWhereLoading: { ar: "كنقلب فالورقة…", en: "Looking at the paper…" },
+  showWhereTitle: { ar: "هاهوما فين مكتوبين فالورقة ديالك", en: "Here is where they are on your paper" },
+  showWhereNone: { ar: "ما لقيناش فين مكتوب بالضبط. شوف الورقة الأصلية.", en: "We couldn't find exactly where it's written. Check the original paper." },
+  showWhereError: { ar: "ما قدرناش دابا، عاود من بعد شوية.", en: "Not possible right now, try again soon." },
+  fieldAmount: { ar: "المبلغ", en: "Amount" },
+  fieldDeadline: { ar: "الأجل", en: "Deadline" },
+  fieldSender: { ar: "شكون صيفطها", en: "Sender" },
+
   // errors
   errUnreadable: { ar: "الصورة ما واضحاش. عاود صوّر فضو مزيان وبلا ما تحرك التيليفون.", en: "The photo isn't clear. Take it again in good light, holding the phone still." },
   errNotDoc: { ar: "هادي ما باناتش ورقة. صوّر الورقة كاملة من الفوق.", en: "This doesn't look like a paper. Photograph the whole page from above." },
